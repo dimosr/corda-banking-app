@@ -2,6 +2,7 @@ package com.template
 
 import com.template.flows.CreateSpreadsheetFlow
 import com.template.flows.GetSpreadsheetFlow
+import com.template.flows.UpdateValueStateFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -23,23 +24,23 @@ class DriverBasedTest {
     fun `create spreadsheet test`() = withDriver {
         // Start a pair of nodes and wait for them both to be ready.
         val (partyAHandle, partyBHandle) = startNodes(bankA, bankB)
-
-        // From each node, make an RPC call to retrieve another node's name from the network map, to verify that the
-        // nodes have started and can communicate.
-
-        // This is a very basic test: in practice tests would be starting flows, and verifying the states in the vault
-        // and other important metrics to ensure that your CorDapp is working as intended.
-        assertEquals(bankB.name, partyAHandle.resolveName(bankB.name))
-        assertEquals(bankA.name, partyBHandle.resolveName(bankA.name))
+        val ourIdentity = partyAHandle.nodeInfo.legalIdentities.first()
 
         partyAHandle.rpc.startFlow(::CreateSpreadsheetFlow).returnValue.get()
 
-        Thread.sleep(3000)
+        var spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow).returnValue.get()
+        assertNotNull(spreadsheetDto)
+        assertEquals(2, spreadsheetDto!!.valueStates.size)
+        var ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
+        assertEquals("", ourState.state.data.data)
 
-        val spreadsheetState = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow).returnValue.get()
+        partyAHandle.rpc.startFlow(::UpdateValueStateFlow, ourState.state.data.linearId.toString(), "12").returnValue.get()
 
-        assertNotNull(spreadsheetState)
-        assertEquals(2, spreadsheetState!!.valueStates.size)
+        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow).returnValue.get()
+        assertNotNull(spreadsheetDto)
+        assertEquals(2, spreadsheetDto!!.valueStates.size)
+        ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
+        assertEquals("12", ourState.state.data.data)
     }
 
     // Runs a test inside the Driver DSL, which provides useful functions for starting nodes, etc.

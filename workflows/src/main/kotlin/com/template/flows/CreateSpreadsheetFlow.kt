@@ -23,11 +23,11 @@ import java.util.*
 
 @InitiatingFlow
 @StartableByRPC
-class CreateSpreadsheetFlow : FlowLogic<SpreadsheetState>() {
+class CreateSpreadsheetFlow : FlowLogic<SpreadsheetDTO>() {
     override val progressTracker = ProgressTracker()
 
     @Suspendable
-    override fun call(): SpreadsheetState {
+    override fun call(): SpreadsheetDTO {
         val notaries = serviceHub.networkMapCache.notaryIdentities
         val notaryToUse = notaries.first()
 
@@ -36,9 +36,9 @@ class CreateSpreadsheetFlow : FlowLogic<SpreadsheetState>() {
 
         val txBuilder = TransactionBuilder(notaryToUse)
         val valueStates = allParticipants.map { ValueState("", it, allParticipants - it, UniqueIdentifier.fromString(UUID.randomUUID().toString())) }
-        val formulaState = FormulaState("", allParticipants)
+        val formulaState = FormulaState("", allParticipants, UniqueIdentifier.fromString(UUID.randomUUID().toString()))
         val spreadsheetId = UniqueIdentifier.fromString(UUID.randomUUID().toString())
-        val spreadsheetState = SpreadsheetState(valueStates, formulaState, otherParticipants + ourIdentity, spreadsheetId)
+        val spreadsheetState = SpreadsheetState(valueStates.map { it.linearId }, formulaState.linearId, otherParticipants + ourIdentity, spreadsheetId)
 
         valueStates.forEach { txBuilder.addOutputState(it) }
         txBuilder.addOutputState(spreadsheetState)
@@ -51,7 +51,9 @@ class CreateSpreadsheetFlow : FlowLogic<SpreadsheetState>() {
 
         subFlow(FinalityFlow(fullySignedTx, sessions))
 
-        return spreadsheetState
+        val valueStatesWithRefs = valueStates.map { retrieveValueState(it.linearId, serviceHub.vaultService) }
+        val formulaStateWithRef = retrieveFormulaState(formulaState.linearId, serviceHub.vaultService)
+        return SpreadsheetDTO(valueStatesWithRefs, formulaStateWithRef, spreadsheetState.editors, spreadsheetId.toString())
     }
 }
 

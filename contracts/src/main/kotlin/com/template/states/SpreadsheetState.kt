@@ -8,8 +8,9 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 
 @BelongsToContract(SpreadsheetContract::class)
-data class SpreadsheetState(val valueStates: List<ValueState>,
-                            val formulaState: FormulaState,
-                            val editors: List<Party>, override val linearId: UniqueIdentifier) : LinearState {
+data class SpreadsheetState(val valueStates: List<UniqueIdentifier>,
+                            val formulaState: UniqueIdentifier,
+                            val editors: List<Party>,
+                            override val linearId: UniqueIdentifier) : LinearState {
     override val participants: List<AbstractParty> = editors
 }
