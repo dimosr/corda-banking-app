@@ -33,9 +33,9 @@ class DriverBasedTest {
 
         val spreadsheetId = partyAHandle.rpc.startFlow(::CreateSpreadsheetFlow).returnValue.get()
 
-        val exists = partyAHandle.rpc.startFlow(::SpreadsheetExistsFlow).returnValue.get()
-
         Thread.sleep(3000)
+
+        val exists = partyAHandle.rpc.startFlow(::SpreadsheetExistsFlow).returnValue.get()
 
         assertEquals(true, exists)
     }

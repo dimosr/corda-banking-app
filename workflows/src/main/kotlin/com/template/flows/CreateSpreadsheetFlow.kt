@@ -35,9 +35,9 @@ class CreateSpreadsheetFlow : FlowLogic<String>() {
 
         val txBuilder = TransactionBuilder(notaryToUse)
         val valueStates = participants.map { ValueState("", ourIdentity, participants, UniqueIdentifier.fromString(UUID.randomUUID().toString())) }
-        val formulaState = FormulaState("", participants)
+        val formulaState = FormulaState("", participants + ourIdentity)
         val spreadsheetId = UniqueIdentifier.fromString(UUID.randomUUID().toString())
-        val spreadsheetState = SpreadsheetState(participants, spreadsheetId)
+        val spreadsheetState = SpreadsheetState(participants + ourIdentity, spreadsheetId)
 
         valueStates.forEach { txBuilder.addOutputState(it) }
         txBuilder.addOutputState(spreadsheetState)
