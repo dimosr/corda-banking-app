@@ -1,10 +1,10 @@
 package com.template.contracts
 
-import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.transactions.LedgerTransaction
 import javax.script.ScriptEngineManager
+import javax.script.SimpleBindings
 
 class FormulaContract : Contract {
     companion object {
@@ -24,10 +24,15 @@ class FormulaContract : Contract {
 
 class FormulaCalculator {
 
-    private var engine = ScriptEngineManager().getEngineByName("JavaScript")
+    private val engine = ScriptEngineManager().getEngineByName("JavaScript")
 
-    fun calculateFormula(formula: String): String {
-        val result = engine.eval(formula)
+    fun calculateFormula(formula: String, cellToValueMap: HashMap<String, String>): String {
+        val bindings = SimpleBindings()
+        for((cellName, cellValue) in cellToValueMap) {
+            bindings[cellName] = cellValue.toFloat()
+        }
+
+        val result = engine.eval(formula, bindings)
         return result.toString()
     }
 
