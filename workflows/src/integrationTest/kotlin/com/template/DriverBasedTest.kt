@@ -2,6 +2,7 @@ package com.template
 
 import com.template.flows.CreateSpreadsheetFlow
 import com.template.flows.GetSpreadsheetFlow
+import com.template.flows.UpdateFormulaStateFlow
 import com.template.flows.UpdateValueStateFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.startFlow
@@ -41,6 +42,10 @@ class DriverBasedTest {
         assertEquals(2, spreadsheetDto!!.valueStates.size)
         ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
         assertEquals("12", ourState.state.data.data)
+
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.formulaState.state.data.linearId.toString(), "a+b").returnValue.get()
+        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow).returnValue.get()
+        assertEquals("a+b", spreadsheetDto!!.formulaState.state.data.formula)
     }
 
     // Runs a test inside the Driver DSL, which provides useful functions for starting nodes, etc.

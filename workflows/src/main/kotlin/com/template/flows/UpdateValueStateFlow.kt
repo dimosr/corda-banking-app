@@ -26,7 +26,6 @@ import net.corda.core.utilities.ProgressTracker
 @InitiatingFlow
 @StartableByRPC
 class UpdateValueStateFlow(private val stateIdentifier: String, private val newValue: String) : FlowLogic<Unit>() {
-    override val progressTracker = ProgressTracker()
 
     @Suspendable
     override fun call(): Unit {
