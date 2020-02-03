@@ -16,12 +16,14 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.TransactionBuilder
+import java.lang.IllegalArgumentException
 
 @InitiatingFlow
 @StartableByRPC
@@ -44,6 +46,9 @@ class UpdateValueStateFlow(
         val notaries = serviceHub.networkMapCache.notaryIdentities
         val notaryToUse = notaries.first()
         val currentState = valueStates.single { it.state.data.rowId == rowId && it.state.data.columnId == columnId }
+        
+        if (currentState.state.data.owner != ourIdentity)
+            throw InvalidOwnerException(currentState.state.data.owner)
 
         val newState = ValueState(newValue, currentState.state.data.owner, currentState.state.data.watchers, currentState.state.data.rowId, currentState.state.data.columnId, currentState.state.data.linearId)
         val txBuilder = TransactionBuilder(notaryToUse)
@@ -86,3 +91,5 @@ class UpdateValueStateFlowResponder(val counterpartySession: FlowSession) : Flow
         subFlow(ReceiveFinalityFlow(counterpartySession))
     }
 }
+
+class InvalidOwnerException(owner: Party) : IllegalArgumentException()
