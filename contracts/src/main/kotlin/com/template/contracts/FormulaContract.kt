@@ -3,6 +3,7 @@ package com.template.contracts
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.transactions.LedgerTransaction
+import javax.script.ScriptEngineManager
 
 class FormulaContract : Contract {
     companion object {
@@ -20,4 +21,15 @@ class FormulaContract : Contract {
     interface Commands : CommandData {
         class Action : Commands
     }
+}
+
+class FormulaCalculator {
+
+    private var engine = ScriptEngineManager().getEngineByName("JavaScript")
+
+    fun calculateFormula(formula: String): String {
+        val result = engine.eval(formula)
+        return result.toString()
+    }
+
 }
