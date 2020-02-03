@@ -1,0 +1,19 @@
+#root {
+    margin: 1rem;
+}
+
+.ticket-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.ticket {
+    width: 24rem;
+    flex: 1;  /** flow horizontally */
+}
+
+.panel {
+    padding: 1rem;
+}
+
