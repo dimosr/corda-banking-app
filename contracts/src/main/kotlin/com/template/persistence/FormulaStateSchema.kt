@@ -22,11 +22,17 @@ object FormulaStateSchemaV1: MappedSchema(schemaFamily = FormulaStateSchema.java
             @ElementCollection
             var editors: List<Party>,
 
+            @Column(name = "row_id", nullable = false)
+            var rowId: Int,
+
+            @Column(name = "column_id", nullable = false)
+            var columnId: Int,
+
             @Column(name = "linear_id", nullable = false)
             var linearId: String
     ): PersistentState() {
         // no-arg constructor required by hibernate
-        constructor(): this("", emptyList(), "")
+        constructor(): this("", emptyList(), 0, 0, "")
     }
 
 }

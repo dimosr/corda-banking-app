@@ -14,11 +14,15 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 
 @BelongsToContract(FormulaContract::class)
-data class FormulaState(val formula: String, val editors: List<Party>, override val linearId: UniqueIdentifier) : LinearState, ContractState, QueryableState {
+data class FormulaState(val formula: String,
+                        val editors: List<Party>,
+                        val rowId: Int,
+                        val columnId: Int,
+                        override val linearId: UniqueIdentifier) : LinearState, ContractState, QueryableState {
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         return when(schema) {
             is FormulaStateSchemaV1 -> {
-                FormulaStateSchemaV1.PersistentFormulaState(formula, editors, linearId.toString())
+                FormulaStateSchemaV1.PersistentFormulaState(formula, editors, rowId, columnId, linearId.toString())
             }
             else -> throw IllegalArgumentException("Unsupported schema: $schema")
         }

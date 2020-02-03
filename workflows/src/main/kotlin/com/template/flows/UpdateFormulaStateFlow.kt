@@ -27,7 +27,7 @@ class UpdateFormulaStateFlow(private val stateIdentifier: String, private val ne
         val notaryToUse = notaries.first()
         val currentState = retrieveFormulaState(UniqueIdentifier.fromString(stateIdentifier), serviceHub.vaultService)
 
-        val newState = FormulaState(newValue, currentState.state.data.editors, currentState.state.data.linearId)
+        val newState = FormulaState(newValue, currentState.state.data.editors, currentState.state.data.rowId, currentState.state.data.columnId, currentState.state.data.linearId)
         val txBuilder = TransactionBuilder(notaryToUse)
         txBuilder.addInputState(currentState)
         txBuilder.addOutputState(newState)
