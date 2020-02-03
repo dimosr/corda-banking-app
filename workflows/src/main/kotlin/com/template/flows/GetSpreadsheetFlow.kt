@@ -10,13 +10,13 @@ import net.corda.core.utilities.ProgressTracker
 
 @InitiatingFlow
 @StartableByRPC
-class SpreadsheetExistsFlow : FlowLogic<Boolean>() {
+class GetSpreadsheetFlow : FlowLogic<SpreadsheetState?>() {
     override val progressTracker = ProgressTracker()
 
     @Suspendable
-    override fun call(): Boolean {
+    override fun call(): SpreadsheetState? {
         val spreadsheets = serviceHub.vaultService.queryBy<SpreadsheetState>()
 
-        return !spreadsheets.states.isEmpty()
+        return spreadsheets.states.map { it.state.data }.firstOrNull()
     }
 }

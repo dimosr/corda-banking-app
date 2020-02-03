@@ -23,34 +23,35 @@ import java.util.*
 
 @InitiatingFlow
 @StartableByRPC
-class CreateSpreadsheetFlow : FlowLogic<String>() {
+class CreateSpreadsheetFlow : FlowLogic<SpreadsheetState>() {
     override val progressTracker = ProgressTracker()
 
     @Suspendable
-    override fun call(): String {
+    override fun call(): SpreadsheetState {
         val notaries = serviceHub.networkMapCache.notaryIdentities
         val notaryToUse = notaries.first()
 
-        val participants = serviceHub.networkMapCache.allNodes.map { it.legalIdentities.first() } - notaries - ourIdentity
+        val otherParticipants = serviceHub.networkMapCache.allNodes.map { it.legalIdentities.first() } - notaries - ourIdentity
+        val allParticipants = otherParticipants + ourIdentity
 
         val txBuilder = TransactionBuilder(notaryToUse)
-        val valueStates = participants.map { ValueState("", ourIdentity, participants, UniqueIdentifier.fromString(UUID.randomUUID().toString())) }
-        val formulaState = FormulaState("", participants + ourIdentity)
+        val valueStates = allParticipants.map { ValueState("", it, allParticipants - it, UniqueIdentifier.fromString(UUID.randomUUID().toString())) }
+        val formulaState = FormulaState("", allParticipants)
         val spreadsheetId = UniqueIdentifier.fromString(UUID.randomUUID().toString())
-        val spreadsheetState = SpreadsheetState(participants + ourIdentity, spreadsheetId)
+        val spreadsheetState = SpreadsheetState(valueStates, formulaState, otherParticipants + ourIdentity, spreadsheetId)
 
         valueStates.forEach { txBuilder.addOutputState(it) }
         txBuilder.addOutputState(spreadsheetState)
         txBuilder.addOutputState(formulaState)
-        txBuilder.addCommand(SpreadsheetContract.CreateSpreadsheet(), participants.map { it.owningKey } + ourIdentity.owningKey)
+        txBuilder.addCommand(SpreadsheetContract.CreateSpreadsheet(), otherParticipants.map { it.owningKey } + ourIdentity.owningKey)
         val partiallySignedTx = serviceHub.signInitialTransaction(txBuilder)
 
-        val sessions = participants.map { initiateFlow(it) }
+        val sessions = otherParticipants.map { initiateFlow(it) }
         val fullySignedTx = subFlow(CollectSignaturesFlow(partiallySignedTx, sessions))
 
         subFlow(FinalityFlow(fullySignedTx, sessions))
 
-        return spreadsheetId.toString()
+        return spreadsheetState
     }
 }
 

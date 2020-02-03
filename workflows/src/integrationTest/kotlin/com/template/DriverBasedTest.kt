@@ -1,7 +1,7 @@
 package com.template
 
 import com.template.flows.CreateSpreadsheetFlow
-import com.template.flows.SpreadsheetExistsFlow
+import com.template.flows.GetSpreadsheetFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -13,6 +13,7 @@ import net.corda.testing.driver.driver
 import org.junit.Test
 import java.util.concurrent.Future
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class DriverBasedTest {
     private val bankA = TestIdentity(CordaX500Name("BankA", "", "GB"))
@@ -31,13 +32,14 @@ class DriverBasedTest {
         assertEquals(bankB.name, partyAHandle.resolveName(bankB.name))
         assertEquals(bankA.name, partyBHandle.resolveName(bankA.name))
 
-        val spreadsheetId = partyAHandle.rpc.startFlow(::CreateSpreadsheetFlow).returnValue.get()
+        partyAHandle.rpc.startFlow(::CreateSpreadsheetFlow).returnValue.get()
 
         Thread.sleep(3000)
 
-        val exists = partyAHandle.rpc.startFlow(::SpreadsheetExistsFlow).returnValue.get()
+        val spreadsheetState = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow).returnValue.get()
 
-        assertEquals(true, exists)
+        assertNotNull(spreadsheetState)
+        assertEquals(2, spreadsheetState!!.valueStates.size)
     }
 
     // Runs a test inside the Driver DSL, which provides useful functions for starting nodes, etc.
