@@ -4,10 +4,7 @@ import com.template.flows.CreateSpreadsheetFlow
 import com.template.flows.GetSpreadsheetFlow
 import com.template.flows.UpdateFormulaStateFlow
 import com.template.flows.UpdateValueStateFlow
-import com.template.states.FormulaState
-import com.template.states.ValueState
 import net.corda.client.jackson.JacksonSupport
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.messaging.startTrackedFlow
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
@@ -31,24 +28,31 @@ class Controller(rpc: NodeRPCConnection) {
     private val proxy = rpc.proxy
     private val objectMapper = JacksonSupport.createNonRpcMapper()
 
-    private var valueCellTagToRef = mutableMapOf<Pair<Int, Int>, StateAndRef<ValueState>>()
-    private var formulaCellTagToRef = mutableMapOf<Pair<Int, Int>, StateAndRef<FormulaState>>()
+    private var spreadsheetId = ""
+    private var formulaId = ""
 
     @GetMapping(value = "get-spreadsheet", produces = ["application/json"])
     private fun getSpreadsheet(
             @QueryParam(value = "id") id: Int
     ) = try {
         val spreadsheet = proxy.startTrackedFlow(::GetSpreadsheetFlow).returnValue.get()
-                ?: proxy.startTrackedFlow(::CreateSpreadsheetFlow).returnValue.get().apply {
-                    valueStates.forEachIndexed { index, stateAndRef ->
-                        valueCellTagToRef[index to 1] = stateAndRef
-                    }
-                    listOf(formulaState).forEachIndexed { index, stateAndRef ->
-                        formulaCellTagToRef[index to 1] = stateAndRef
-                    }
-                }
+                ?: proxy.startTrackedFlow(::CreateSpreadsheetFlow).returnValue.get()
 
-        objectMapper.writeValueAsString(spreadsheet)
+        val renderableCells = spreadsheet.valueStates.map {
+            val state = it.state.data
+            RenderableCell(state.rowId, state.columnId, state.data, null)
+        } + RenderableCell(
+                spreadsheet.valueStates.map { it.state.data.rowId }.max() ?: 0,
+                0,
+                null,
+                spreadsheet.formulaState.state.data.formula
+        )
+
+        spreadsheetId = spreadsheet.linearId
+        formulaId = spreadsheet.formulaState.state.data.linearId.toString()
+
+        val res = renderableCells.sortedWith(compareBy({ it.row }, { it.col })).map { listOf(it.d, it.f) }
+        objectMapper.writeValueAsString(res)
     } catch (e: Exception) {
         Response.status(Response.Status.BAD_REQUEST).entity(e.message).build()
     }
@@ -61,20 +65,14 @@ class Controller(rpc: NodeRPCConnection) {
             @QueryParam(value = "col") col: Int
     ) = try {
         if (f == null)
-            proxy.startTrackedFlow(
-                    ::UpdateValueStateFlow,
-                    valueCellTagToRef[row to col]!!.state.data.linearId.toString(),
-                    d.toString()
-            )
+            proxy.startTrackedFlow(::UpdateValueStateFlow, spreadsheetId, row, col, d.toString())
         else
-            proxy.startTrackedFlow(
-                    ::UpdateFormulaStateFlow,
-                    formulaCellTagToRef[row to col]!!.state.data.linearId.toString(),
-                    f
-            )
+            proxy.startTrackedFlow(::UpdateFormulaStateFlow, formulaId, f)
 
         "Successful cell update."
     } catch (e: Exception) {
         Response.status(Response.Status.BAD_REQUEST).entity(e.message).build()
     }
 }
+
+data class RenderableCell(val row: Int, val col: Int, val d: String?, val f: String?)
