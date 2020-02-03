@@ -1,9 +1,7 @@
 package com.template.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.template.persistence.FormulaStateSchemaV1
 import com.template.persistence.SpreadsheetStateSchemaV1
-import com.template.states.FormulaState
 import com.template.states.SpreadsheetState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
@@ -12,7 +10,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.ProgressTracker
@@ -24,13 +21,16 @@ class GetSpreadsheetFlow(private val spreadsheetId: String) : FlowLogic<Spreadsh
 
     @Suspendable
     override fun call(): SpreadsheetDTO? {
-        val spreadsheet = retrieveSpreadsheetState(UniqueIdentifier.fromString(spreadsheetId), serviceHub.vaultService)?.state?.data ?: return null
+        val spreadsheet = retrieveSpreadsheetState(UniqueIdentifier.fromString(spreadsheetId), serviceHub.vaultService)?.state?.data
+                ?: return null
 
         val valueStates = spreadsheet.valueStates.map { linearId ->
             retrieveValueState(linearId, serviceHub.vaultService)
         }
-        val formulaState = retrieveFormulaState(spreadsheet.formulaState, serviceHub.vaultService)
-        return SpreadsheetDTO(valueStates, formulaState, spreadsheet.editors, spreadsheet.linearId.toString())
+        val formulaStates = spreadsheet.formulaStates.map { linearId ->
+            retrieveFormulaState(linearId, serviceHub.vaultService)
+        }
+        return SpreadsheetDTO(valueStates, formulaStates, spreadsheet.editors, spreadsheet.linearId.toString())
     }
 }
 

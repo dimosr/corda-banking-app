@@ -1,13 +1,11 @@
 package com.template.webserver
 
-import com.template.flows.CreateSpreadsheetFlow
-import com.template.flows.GetSpreadsheetFlow
-import com.template.flows.UpdateFormulaStateFlow
-import com.template.flows.UpdateValueStateFlow
+import com.template.flows.*
 import net.corda.client.jackson.JacksonSupport
 import net.corda.core.messaging.startTrackedFlow
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.lang.Exception
@@ -28,28 +26,27 @@ class Controller(rpc: NodeRPCConnection) {
     private val proxy = rpc.proxy
     private val objectMapper = JacksonSupport.createNonRpcMapper()
 
-    private var spreadsheetId = ""
-    private var formulaId = ""
+    @GetMapping(value = "get-all-spreadsheets", produces = ["application/json"])
+    private fun getAllSpreadsheets() = try {
+        proxy.startTrackedFlow(::GetAllSpreadsheetsFlow).returnValue.get()
+    } catch (e: Exception) {
+        Response.status(Response.Status.BAD_REQUEST).entity(e.message).build()
+    }
 
     @GetMapping(value = "get-spreadsheet", produces = ["application/json"])
     private fun getSpreadsheet(
-            @QueryParam(value = "id") id: Int
+            @QueryParam(value = "id") id: String
     ) = try {
-        val spreadsheet = proxy.startTrackedFlow(::GetSpreadsheetFlow).returnValue.get()
-                ?: proxy.startTrackedFlow(::CreateSpreadsheetFlow).returnValue.get()
+        val spreadsheet = proxy.startTrackedFlow(::GetSpreadsheetFlow, id).returnValue.get()
+        require(spreadsheet != null) { "Sheet with id $id does not exist." }
 
-        val renderableCells = spreadsheet.valueStates.map {
+        val renderableCells = spreadsheet!!.valueStates.map {
             val state = it.state.data
             RenderableCell(state.rowId, state.columnId, state.data, null)
-        } + RenderableCell(
-                spreadsheet.valueStates.map { it.state.data.rowId }.max() ?: 0,
-                0,
-                null,
-                spreadsheet.formulaState.state.data.formula
-        )
-
-        spreadsheetId = spreadsheet.linearId
-        formulaId = spreadsheet.formulaState.state.data.linearId.toString()
+        } + spreadsheet.formulaStates.map {
+            val state = it.state.data
+            RenderableCell(state.rowId, state.columnId, null, state.formula)
+        }
 
         val res = renderableCells.sortedWith(compareBy({ it.row }, { it.col })).map { listOf(it.d, it.f) }
         objectMapper.writeValueAsString(res)
@@ -57,17 +54,28 @@ class Controller(rpc: NodeRPCConnection) {
         Response.status(Response.Status.BAD_REQUEST).entity(e.message).build()
     }
 
+    @GetMapping(value = "create-spreadsheet", produces = ["application/json"])
+    private fun createSpreadsheet() = try {
+        proxy.startTrackedFlow(::CreateSpreadsheetFlow).returnValue.get()
+        "Spreadsheet created successfully."
+    } catch (e: Exception) {
+        Response.status(Response.Status.BAD_REQUEST).entity(e.message).build()
+    }
+
     @GetMapping(value = "set-data", produces = ["application/json"])
     private fun setData(
-            @QueryParam(value = "d") d: Int?,
+            @QueryParam(value = "id") id: String,
+            @QueryParam(value = "d") d: String?,
             @QueryParam(value = "f") f: String?,
             @QueryParam(value = "row") row: Int,
             @QueryParam(value = "col") col: Int
     ) = try {
+        require(d != null || f != null) { "Either formula or value must be non trivial value." }
+
         if (f == null)
-            proxy.startTrackedFlow(::UpdateValueStateFlow, spreadsheetId, row, col, d.toString())
+            proxy.startTrackedFlow(::UpdateValueStateFlow, id, row, col, d!!).returnValue.get()
         else
-            proxy.startTrackedFlow(::UpdateFormulaStateFlow, formulaId, f)
+            proxy.startTrackedFlow(::UpdateFormulaStateFlow, id, row, col, f).returnValue.get()
 
         "Successful cell update."
     } catch (e: Exception) {

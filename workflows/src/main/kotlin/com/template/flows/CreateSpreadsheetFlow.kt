@@ -39,13 +39,15 @@ class CreateSpreadsheetFlow : FlowLogic<SpreadsheetDTO>() {
 
         val valueStates = allParticipants.sortedBy { it.name.toString() }
                 .mapIndexed { index, participant -> ValueState("", participant, allParticipants - participant, index, 0, UniqueIdentifier.fromString(UUID.randomUUID().toString())) }
-        val formulaState = FormulaState("", allParticipants, allParticipants.size, 0, UniqueIdentifier.fromString(UUID.randomUUID().toString()))
+        val formulaStates = listOf(0, 1, 2).map { index ->
+            FormulaState("", allParticipants, allParticipants.size, index, UniqueIdentifier.fromString(UUID.randomUUID().toString()))
+        }
         val spreadsheetId = UniqueIdentifier.fromString(UUID.randomUUID().toString())
-        val spreadsheetState = SpreadsheetState(valueStates.map { it.linearId }, formulaState.linearId, otherParticipants + ourIdentity, spreadsheetId)
+        val spreadsheetState = SpreadsheetState(valueStates.map { it.linearId }, formulaStates.map { it.linearId }, otherParticipants + ourIdentity, spreadsheetId)
 
         valueStates.forEach { txBuilder.addOutputState(it) }
+        formulaStates.forEach { txBuilder.addOutputState(it) }
         txBuilder.addOutputState(spreadsheetState)
-        txBuilder.addOutputState(formulaState)
         txBuilder.addCommand(SpreadsheetContract.CreateSpreadsheet(), otherParticipants.map { it.owningKey } + ourIdentity.owningKey)
         val partiallySignedTx = serviceHub.signInitialTransaction(txBuilder)
 
@@ -55,8 +57,8 @@ class CreateSpreadsheetFlow : FlowLogic<SpreadsheetDTO>() {
         subFlow(FinalityFlow(fullySignedTx, sessions))
 
         val valueStatesWithRefs = valueStates.map { retrieveValueState(it.linearId, serviceHub.vaultService) }
-        val formulaStateWithRef = retrieveFormulaState(formulaState.linearId, serviceHub.vaultService)
-        return SpreadsheetDTO(valueStatesWithRefs, formulaStateWithRef, spreadsheetState.editors, spreadsheetId.toString())
+        val formulaStatesWithRef = formulaStates.map { retrieveFormulaState(it.linearId, serviceHub.vaultService) }
+        return SpreadsheetDTO(valueStatesWithRefs, formulaStatesWithRef, spreadsheetState.editors, spreadsheetId.toString())
     }
 }
 
@@ -65,7 +67,8 @@ class CreateSpreadsheetFlowResponder(val counterpartySession: FlowSession) : Flo
     @Suspendable
     override fun call() {
         val signFlow = object : SignTransactionFlow(counterpartySession) {
-            @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {}
+            @Suspendable
+            override fun checkTransaction(stx: SignedTransaction) = requireThat {}
         }
         val signedTx = subFlow(signFlow)
 

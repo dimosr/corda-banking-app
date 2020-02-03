@@ -46,9 +46,9 @@ class DriverBasedTest {
         ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
         assertEquals("12", ourState.state.data.data)
 
-        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.formulaState.state.data.linearId.toString(), "a+b").returnValue.get()
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.formulaStates.state.data.linearId.toString(), "a+b").returnValue.get()
         spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
-        assertEquals("a+b", spreadsheetDto!!.formulaState.state.data.formula)
+        assertEquals("a+b", spreadsheetDto!!.formulaStates.state.data.formula)
     }
 
     // Runs a test inside the Driver DSL, which provides useful functions for starting nodes, etc.

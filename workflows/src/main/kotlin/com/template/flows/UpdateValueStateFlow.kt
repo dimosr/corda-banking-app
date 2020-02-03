@@ -25,7 +25,12 @@ import net.corda.core.transactions.TransactionBuilder
 
 @InitiatingFlow
 @StartableByRPC
-class UpdateValueStateFlow(private val spreadsheetStateId: String, private val rowId: Int, private val columnId: Int, private val newValue: String) : FlowLogic<Unit>() {
+class UpdateValueStateFlow(
+        private val spreadsheetStateId: String,
+        private val rowId: Int,
+        private val columnId: Int,
+        private val newValue: String
+) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call(): Unit {
@@ -38,9 +43,9 @@ class UpdateValueStateFlow(private val spreadsheetStateId: String, private val r
 
         val notaries = serviceHub.networkMapCache.notaryIdentities
         val notaryToUse = notaries.first()
-        val currentState = valueStates.filter { it.state.data.rowId == rowId && it.state.data.columnId == columnId }.single()
+        val currentState = valueStates.single { it.state.data.rowId == rowId && it.state.data.columnId == columnId }
 
-        val newState = ValueState(newValue, currentState.state.data.owner, currentState.state.data.watchers, currentState.state.data.rowId, currentState.state.data.columnId,currentState.state.data.linearId)
+        val newState = ValueState(newValue, currentState.state.data.owner, currentState.state.data.watchers, currentState.state.data.rowId, currentState.state.data.columnId, currentState.state.data.linearId)
         val txBuilder = TransactionBuilder(notaryToUse)
         txBuilder.addInputState(currentState)
         txBuilder.addOutputState(newState)

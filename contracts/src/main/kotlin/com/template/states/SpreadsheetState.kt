@@ -1,8 +1,6 @@
 package com.template.states
 
 import com.template.contracts.SpreadsheetContract
-import com.template.persistence.FormulaStateSchemaV1
-import com.template.persistence.SpreadsheetStateSchema
 import com.template.persistence.SpreadsheetStateSchemaV1
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
@@ -15,13 +13,13 @@ import net.corda.core.schemas.QueryableState
 
 @BelongsToContract(SpreadsheetContract::class)
 data class SpreadsheetState(val valueStates: List<UniqueIdentifier>,
-                            val formulaState: UniqueIdentifier,
+                            val formulaStates: List<UniqueIdentifier>,
                             val editors: List<Party>,
                             override val linearId: UniqueIdentifier) : LinearState, QueryableState {
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
-        return when(schema) {
+        return when (schema) {
             is SpreadsheetStateSchemaV1 -> {
-                SpreadsheetStateSchemaV1.PersistentSpreadsheetState(valueStates.map { it.toString() }, formulaState.toString(), editors, linearId.toString())
+                SpreadsheetStateSchemaV1.PersistentSpreadsheetState(valueStates.map { it.toString() }, formulaStates.toString(), editors, linearId.toString())
             }
             else -> throw IllegalArgumentException("Unsupported schema: $schema")
         }
