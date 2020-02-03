@@ -1,6 +1,5 @@
 package com.template
 
-import com.template.flows.Responder
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.TestCordapp
@@ -17,9 +16,9 @@ class FlowTests {
     private val b = network.createNode()
 
     init {
-        listOf(a, b).forEach {
-            it.registerInitiatedFlow(Responder::class.java)
-        }
+//        listOf(a, b).forEach {
+//            it.registerInitiatedFlow(Responder::class.java)
+//        }
     }
 
     @Before
