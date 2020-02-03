@@ -11,6 +11,7 @@ sourceSets {
 dependencies {
     // Corda dependencies.
     compile "$corda_release_group:corda-rpc:$corda_release_version"
+    compile "$corda_release_group:corda-jackson:$corda_release_version"
 
     // CorDapp dependencies.
     compile project(":contracts")
@@ -24,6 +25,7 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.0.1'
+    compile group: 'org.glassfish.jersey.core', name: 'jersey-common', version: '2.29.1'
 }
 
 
