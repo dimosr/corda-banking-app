@@ -35,7 +35,10 @@ class CreateSpreadsheetFlow : FlowLogic<SpreadsheetDTO>() {
         val allParticipants = otherParticipants + ourIdentity
 
         val txBuilder = TransactionBuilder(notaryToUse)
-        val valueStates = allParticipants.map { ValueState("", it, allParticipants - it, UniqueIdentifier.fromString(UUID.randomUUID().toString())) }
+        allParticipants.sortedBy { it.name.toString() }
+
+        val valueStates = allParticipants.sortedBy { it.name.toString() }
+                .mapIndexed { index, participant -> ValueState("", participant, allParticipants - participant, index, 0, UniqueIdentifier.fromString(UUID.randomUUID().toString())) }
         val formulaState = FormulaState("", allParticipants, UniqueIdentifier.fromString(UUID.randomUUID().toString()))
         val spreadsheetId = UniqueIdentifier.fromString(UUID.randomUUID().toString())
         val spreadsheetState = SpreadsheetState(valueStates.map { it.linearId }, formulaState.linearId, otherParticipants + ourIdentity, spreadsheetId)

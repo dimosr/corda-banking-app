@@ -1,6 +1,5 @@
 package com.template.persistence
 
-import com.template.states.ValueState
 import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -26,11 +25,17 @@ object ValueStateSchemaV1: MappedSchema(schemaFamily = ValueStateSchema.javaClas
         @ElementCollection
         var watchers: List<Party>,
 
+        @Column(name = "row_id", nullable = false)
+        var rowId: Int,
+
+        @Column(name = "column_id", nullable = false)
+        var columnId: Int,
+
         @Column(name = "linear_id", nullable = false)
         var linearId: String
     ): PersistentState() {
         // no-arg constructor required by hibernate
-        constructor(): this("", null, emptyList(), "")
+        constructor(): this("", null, emptyList(), 0, 0, "")
     }
 
 }

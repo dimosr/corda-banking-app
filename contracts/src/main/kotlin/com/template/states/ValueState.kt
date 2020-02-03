@@ -12,11 +12,16 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 
 @BelongsToContract(ValueContract::class)
-data class ValueState(val data: String, val owner: Party, val watchers: List<Party>, override val linearId: UniqueIdentifier) : LinearState, QueryableState {
+data class ValueState(val data: String,
+                      val owner: Party,
+                      val watchers: List<Party>,
+                      val rowId: Int,
+                      val columnId: Int,
+                      override val linearId: UniqueIdentifier) : LinearState, QueryableState {
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         return when(schema) {
             is ValueStateSchemaV1 -> {
-                ValueStateSchemaV1.PersistentValueState(data, owner, watchers, linearId.toString())
+                ValueStateSchemaV1.PersistentValueState(data, owner, watchers, rowId, columnId, linearId.toString())
             }
             else -> throw IllegalArgumentException("Unsupported schema: $schema")
         }

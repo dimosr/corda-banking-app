@@ -33,7 +33,7 @@ class UpdateValueStateFlow(private val stateIdentifier: String, private val newV
         val notaryToUse = notaries.first()
         val currentState = retrieveValueState(UniqueIdentifier.fromString(stateIdentifier), serviceHub.vaultService)
 
-        val newState = ValueState(newValue, currentState.state.data.owner, currentState.state.data.watchers, currentState.state.data.linearId)
+        val newState = ValueState(newValue, currentState.state.data.owner, currentState.state.data.watchers, currentState.state.data.rowId, currentState.state.data.columnId,currentState.state.data.linearId)
         val txBuilder = TransactionBuilder(notaryToUse)
         txBuilder.addInputState(currentState)
         txBuilder.addOutputState(newState)
