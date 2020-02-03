@@ -35,7 +35,7 @@ class DriverBasedTest {
         var ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
         assertEquals("", ourState.state.data.data)
 
-        partyAHandle.rpc.startFlow(::UpdateValueStateFlow, ourState.state.data.linearId.toString(), "12").returnValue.get()
+        partyAHandle.rpc.startFlow(::UpdateValueStateFlow, spreadsheetDto.linearId, ourState.state.data.rowId, ourState.state.data.columnId, "12").returnValue.get()
 
         spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow).returnValue.get()
         assertNotNull(spreadsheetDto)
