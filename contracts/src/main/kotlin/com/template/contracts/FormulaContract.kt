@@ -22,18 +22,19 @@ class FormulaContract : Contract {
     class Update: TypeOnlyCommandData()
 }
 
-class FormulaCalculator {
+class FormulaCalculator { // TODO: handle empty cells
 
-    private val engine = ScriptEngineManager().getEngineByName("JavaScript")
+    companion object {
+        private val engine = ScriptEngineManager().getEngineByName("JavaScript")
 
-    fun calculateFormula(formula: String, cellToValueMap: HashMap<String, String>): String {
-        val bindings = SimpleBindings()
-        for((cellName, cellValue) in cellToValueMap) {
-            bindings[cellName] = cellValue.toFloat()
+        fun calculateFormula(formula: String, cellToValueMap: HashMap<String, String>): String {
+            val bindings = SimpleBindings()
+            for((cellName, cellValue) in cellToValueMap) {
+                bindings[cellName] = cellValue.toFloat()
+            }
+
+            val result = engine.eval(formula, bindings)
+            return result.toString()
         }
-
-        val result = engine.eval(formula, bindings)
-        return result.toString()
     }
-
 }
