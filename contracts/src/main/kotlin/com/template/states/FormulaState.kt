@@ -7,4 +7,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 
 @BelongsToContract(FormulaContract::class)
-data class FormulaState(val formula: String, val editors: List<Party>,override val participants: List<AbstractParty> = editors) : ContractState
+data class FormulaState(val formula: String, val editors: List<Party>) : ContractState {
+    override val participants: List<AbstractParty> = editors
+}

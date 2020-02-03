@@ -8,4 +8,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 
 @BelongsToContract(ValueContract::class)
-data class ValueState(val data: String, val owner: Party, val watchers: List<Party>, override val participants: List<AbstractParty> = watchers + owner, override val linearId: UniqueIdentifier) : LinearState
+data class ValueState(val data: String, val owner: Party, val watchers: List<Party>, override val linearId: UniqueIdentifier) : LinearState {
+    override val participants: List<AbstractParty> = watchers + owner
+}

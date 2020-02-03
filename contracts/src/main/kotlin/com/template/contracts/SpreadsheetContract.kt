@@ -2,6 +2,7 @@ package com.template.contracts
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
+import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.transactions.LedgerTransaction
 
 class SpreadsheetContract : Contract {
@@ -17,7 +18,5 @@ class SpreadsheetContract : Contract {
     }
 
     // Used to indicate the transaction's intent.
-    interface Commands : CommandData {
-        class Action : Commands
-    }
+    class CreateSpreadsheet: TypeOnlyCommandData()
 }
