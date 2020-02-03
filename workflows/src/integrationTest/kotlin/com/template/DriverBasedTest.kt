@@ -1,6 +1,7 @@
 package com.template
 
 import com.template.flows.CreateSpreadsheetFlow
+import com.template.flows.GetAllSpreadsheetsFlow
 import com.template.flows.GetSpreadsheetFlow
 import com.template.flows.UpdateFormulaStateFlow
 import com.template.flows.UpdateValueStateFlow
@@ -28,8 +29,10 @@ class DriverBasedTest {
         val ourIdentity = partyAHandle.nodeInfo.legalIdentities.first()
 
         partyAHandle.rpc.startFlow(::CreateSpreadsheetFlow).returnValue.get()
+        val spreadsheetIds = partyAHandle.rpc.startFlow(::GetAllSpreadsheetsFlow).returnValue.get()
+        val spreadsheetId = spreadsheetIds.first()
 
-        var spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow).returnValue.get()
+        var spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
         assertNotNull(spreadsheetDto)
         assertEquals(2, spreadsheetDto!!.valueStates.size)
         var ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
@@ -37,14 +40,14 @@ class DriverBasedTest {
 
         partyAHandle.rpc.startFlow(::UpdateValueStateFlow, spreadsheetDto.linearId, ourState.state.data.rowId, ourState.state.data.columnId, "12").returnValue.get()
 
-        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow).returnValue.get()
+        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
         assertNotNull(spreadsheetDto)
         assertEquals(2, spreadsheetDto!!.valueStates.size)
         ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
         assertEquals("12", ourState.state.data.data)
 
         partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.formulaState.state.data.linearId.toString(), "a+b").returnValue.get()
-        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow).returnValue.get()
+        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
         assertEquals("a+b", spreadsheetDto!!.formulaState.state.data.formula)
     }
 
