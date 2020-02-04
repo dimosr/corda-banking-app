@@ -34,7 +34,7 @@ class Spreadsheet extends React.Component {
 
         console.log("Max row length", maxRowLength);
 
-        if (! this.props.data || this.props.data.length === 0) {
+        if (!this.props.data || this.props.data.length === 0) {
             return (<div></div>);
         }
 
@@ -433,7 +433,7 @@ class App extends React.Component {
                 return;
             }
         ).then(json => {
-            if (! json) return;
+            if (!json) return;
 
             if ('status' in json && json.status < 299) {
                 this.getSpreadsheet(this.state.current_id);
@@ -533,7 +533,7 @@ class App extends React.Component {
                         this.getSpreadsheet(json['id']);
                     } else if ('status' in json && json['status'] > 299) {
                         let message = json.statusInfo + ' ' + json.entity;
-                        this.setState({ message: message });        
+                        this.setState({ message: message });
                     }
                 }
             });
