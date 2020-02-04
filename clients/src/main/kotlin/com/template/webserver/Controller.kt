@@ -57,7 +57,7 @@ class Controller(rpc: NodeRPCConnection) {
 
     @GetMapping(value = "create-spreadsheet", produces = ["application/json"])
     private fun createSpreadsheet() = try {
-        proxy.startTrackedFlow(::CreateSpreadsheetFlow).returnValue.get().linearId
+        mapOf("id" to proxy.startTrackedFlow(::CreateSpreadsheetFlow).returnValue.get().linearId)
     } catch (e: Exception) {
         Response.status(Response.Status.BAD_REQUEST).entity(e.message).build()
     }
