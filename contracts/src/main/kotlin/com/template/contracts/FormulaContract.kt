@@ -1,14 +1,12 @@
 package com.template.contracts
 
 import com.template.states.FormulaState
-import com.template.states.ValueState
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TypeOnlyCommandData
-import net.corda.core.contracts.requireSingleCommand
 import net.corda.core.contracts.requireThat
 import net.corda.core.transactions.LedgerTransaction
-import java.lang.IllegalArgumentException
+import org.apache.commons.lang3.StringUtils
 import javax.script.ScriptEngineManager
 import javax.script.ScriptException
 import javax.script.SimpleBindings
@@ -73,11 +71,19 @@ class FormulaCalculator { // TODO: handle empty cells
                 val fixedFormula = replaceUnknownCellValuesWith0(formula)
                 result = engine.eval(fixedFormula, bindings)
             }
-            return result.toString()
+
+            return prepareResultString(result)
         }
 
         fun replaceUnknownCellValuesWith0(formula: String): String {
             return formula.replace(cellIdentifierRegex, "0")
+        }
+
+        fun prepareResultString(result: Any): String {
+            var resultString = result.toString()
+            if(resultString.takeLast(2) == ".0")
+                resultString = resultString.substring(0, resultString.length - 2)
+            return resultString
         }
     }
 }
