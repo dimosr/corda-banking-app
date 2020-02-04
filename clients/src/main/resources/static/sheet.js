@@ -371,7 +371,7 @@ class App extends React.Component {
         this.newSpreadsheet = this.newSpreadsheet.bind(this);
         this.getSpreadsheet = this.getSpreadsheet.bind(this);
         this.getAllSpreadsheets = this.getAllSpreadsheets.bind(this);
-        this.onCellEdited = this.onCellEdited.bind(this);
+        this.setData = this.setData.bind(this);
         this.convertData = this.convertData.bind(this);
         this.clearMessage = this.clearMessage.bind(this);
     }
@@ -386,7 +386,7 @@ class App extends React.Component {
                     onClick={this.newSpreadsheet}
                     onSelect={this.getSpreadsheet} />
 
-                <Spreadsheet data={this.state.data} onCellEdited={this.onCellEdited} id={this.state.current_id} />
+                <Spreadsheet data={this.state.data} onCellEdited={this.setData} id={this.state.current_id} />
                 <Message text={this.state.message} onClear={this.clearMessage} />
             </div>
         )
@@ -405,8 +405,9 @@ class App extends React.Component {
         this.setState({ message: "" });
     }
 
-    onCellEdited(rowIdx, colIdx, display, formula) {
-        console.log("onCellEdited", this.state.current_id, "(", rowIdx, ",", colIdx, ")", " d=", display, " f=", formula);
+    // REST call back to the nodes
+    setData(rowIdx, colIdx, display, formula) {
+        console.log("setData", this.state.current_id, "(", rowIdx, ",", colIdx, ")", " d=", display, " f=", formula);
 
         let value = formula ? '&f=' + encodeURIComponent(formula) : '&d=' + display;
         let cell = this.state.data[rowIdx][colIdx];
@@ -423,12 +424,15 @@ class App extends React.Component {
             result => {
                 if (result.status > 299) {
                     console.log("BAD REQUEST: ", result);
-                    return;
+                    return result.json();
                 }
-                return result.json();
+                this.getSpreadsheet(this.state.current_id);
+                return;
             }
         ).then(json => {
-            if (json.status < 299) {
+            if (! json) return;
+                        
+            if ('status' in json && json.status < 299) {
                 this.getSpreadsheet(this.state.current_id);
             } else {
                 console.log(json);
@@ -441,6 +445,7 @@ class App extends React.Component {
         // TODO - remove the 'getSpreadsheet' and react to an 'on tick' from the web socket.
     }
 
+    // REST call
     getAllSpreadsheets() {
         return fetch('/get-all-spreadsheets')
             .then(result => result.json())
@@ -450,6 +455,8 @@ class App extends React.Component {
             });
     }
 
+    // Simply walk through the sparse list, get the max bounds and generate
+    // a 2d array, with dummy values if missing.
     convertData(dataFromNode) {
         // get table bounds
         let max_row = 0;
@@ -506,6 +513,7 @@ class App extends React.Component {
             });
     }
 
+    // REST call
     newSpreadsheet() {
         fetch('/create-spreadsheet')
             .then(result => {
@@ -525,7 +533,6 @@ class App extends React.Component {
                         this.setState({ message: message });        
                     }
                 }
-
             });
     }
 }
