@@ -1,6 +1,7 @@
 package com.template.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.template.contracts.FormulaCalculator
 import com.template.contracts.FormulaContract
 import com.template.contracts.SpreadsheetContract
 import com.template.contracts.ValueContract
@@ -61,7 +62,15 @@ class CreateSpreadsheetFlow : FlowLogic<SpreadsheetDTO>() {
 
         val valueStatesWithRefs = valueStates.map { retrieveValueState(it.linearId, serviceHub.vaultService) }
         val formulaStatesWithRef = formulaStates.map { retrieveFormulaState(it.linearId, serviceHub.vaultService) }
-        return SpreadsheetDTO(valueStatesWithRefs, formulaStatesWithRef, spreadsheetState.editors, spreadsheetId.toString())
+
+        val cellToValueMap = valueStatesWithRefs.map {
+            it.ref.txhash.toString() + "_" + it.ref.index to it.state.data.data
+        }.toMap() as HashMap<String, String>
+        val calculatedFormulaValue = FormulaCalculator.calculateFormula(
+                formulaStatesWithRef[0].state.data.formula, cellToValueMap)
+
+        return SpreadsheetDTO(valueStatesWithRefs, formulaStatesWithRef, spreadsheetState.editors,
+                spreadsheetId.toString(), calculatedFormulaValue)
     }
 }
 

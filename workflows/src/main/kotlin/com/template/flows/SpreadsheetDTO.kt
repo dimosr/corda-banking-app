@@ -11,4 +11,5 @@ import net.corda.core.serialization.CordaSerializable
 data class SpreadsheetDTO(val valueStates: List<StateAndRef<ValueState>>,
                           val formulaStates: List<StateAndRef<FormulaState>>,
                           val editors: List<Party>,
-                          val linearId: String)
+                          val linearId: String,
+                          val calculatedFormulaValue: String)

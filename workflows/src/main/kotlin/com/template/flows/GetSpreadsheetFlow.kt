@@ -1,6 +1,7 @@
 package com.template.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.template.contracts.FormulaCalculator
 import com.template.persistence.SpreadsheetStateSchemaV1
 import com.template.states.SpreadsheetState
 import net.corda.core.contracts.StateAndRef
@@ -30,7 +31,15 @@ class GetSpreadsheetFlow(private val spreadsheetId: String) : FlowLogic<Spreadsh
         val formulaStates = spreadsheet.formulaStates.map { linearId ->
             retrieveFormulaState(linearId, serviceHub.vaultService)
         }
-        return SpreadsheetDTO(valueStates, formulaStates, spreadsheet.editors, spreadsheet.linearId.toString())
+
+        val cellToValueMap = valueStates.map {
+            it.ref.txhash.toString() + "_" + it.ref.index to it.state.data.data
+        }.toMap() as HashMap<String, String>
+        val calculatedFormulaValue = FormulaCalculator.calculateFormula(
+                formulaStates[0].state.data.formula, cellToValueMap)
+
+        return SpreadsheetDTO(valueStates, formulaStates, spreadsheet.editors, spreadsheet.linearId.toString(),
+                calculatedFormulaValue)
     }
 }
 

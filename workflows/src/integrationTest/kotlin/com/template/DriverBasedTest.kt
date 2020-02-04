@@ -41,6 +41,7 @@ class DriverBasedTest {
         assertEquals(2, spreadsheetDto!!.valueStates.size)
         var ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
         assertEquals("", ourState.state.data.data)
+        assertEquals("", spreadsheetDto!!.calculatedFormulaValue)
 
         partyAHandle.rpc.startFlow(::UpdateValueStateFlow, spreadsheetDto.linearId, ourState.state.data.rowId, ourState.state.data.columnId,  "12", ourState.state.data.version).returnValue.get()
 
@@ -51,9 +52,10 @@ class DriverBasedTest {
         assertEquals("12", ourState.state.data.data)
 
         val formulaState = spreadsheetDto.formulaStates.first().state.data
-        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "a+b", formulaState.version).returnValue.get()
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A_1+B_1", formulaState.version).returnValue.get()
         spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
-        assertEquals("a+b", spreadsheetDto!!.formulaStates.first().state.data.formula)
+        assertEquals("A_1+B_1", spreadsheetDto!!.formulaStates.first().state.data.formula)
+        assertEquals("0", spreadsheetDto!!.calculatedFormulaValue)
     }
 
     @Test

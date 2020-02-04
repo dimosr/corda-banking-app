@@ -10,6 +10,7 @@ import net.corda.core.contracts.requireThat
 import net.corda.core.transactions.LedgerTransaction
 import java.lang.IllegalArgumentException
 import javax.script.ScriptEngineManager
+import javax.script.ScriptException
 import javax.script.SimpleBindings
 
 class FormulaContract : Contract {
@@ -49,15 +50,34 @@ class FormulaCalculator { // TODO: handle empty cells
 
     companion object {
         private val engine = ScriptEngineManager().getEngineByName("JavaScript")
+        private val cellIdentifierRegex = Regex("[A-Z]+_[0-9]+")
 
         fun calculateFormula(formula: String, cellToValueMap: HashMap<String, String>): String {
+            if(formula == "")
+                return ""
+
             val bindings = SimpleBindings()
             for((cellName, cellValue) in cellToValueMap) {
-                bindings[cellName] = cellValue.toFloat()
+                if(cellValue == "") {
+                    bindings[cellName] = 0
+                }
+                else {
+                    bindings[cellName] = cellValue.toFloat()
+                }
             }
 
-            val result = engine.eval(formula, bindings)
+            var result: Any
+            try {
+                result = engine.eval(formula, bindings)
+            } catch (e: ScriptException) {
+                val fixedFormula = replaceUnknownCellValuesWith0(formula)
+                result = engine.eval(fixedFormula, bindings)
+            }
             return result.toString()
+        }
+
+        fun replaceUnknownCellValuesWith0(formula: String): String {
+            return formula.replace(cellIdentifierRegex, "0")
         }
     }
 }
