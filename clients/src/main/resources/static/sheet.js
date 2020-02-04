@@ -168,7 +168,7 @@ class SpreadsheetCell extends React.Component {
                     onCellEdited={(d, f) => this.onCellEdited(d, f)} />);
             } else {
                 let style = "bg-secondary";
-                if (this.props.display || this.props.formula) {
+                if (this.props.display || this.props.formula || this.props.display === "" || this.props.formula === "") {
                     style = "";
                 }
                 return (
@@ -221,8 +221,8 @@ class SpreadsheetRow extends React.Component {
                 let c = this.props.data[colIdx];
                 if (Array.isArray(c)) {
                     cells.push(<SpreadsheetCell display={c[0]} formula={c[1]} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
-                // } else if (c instanceof Array) {
-                //     cells.push(<SpreadsheetCell display={c['d']} formula={c['f']} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
+                    // } else if (c instanceof Array) {
+                    //     cells.push(<SpreadsheetCell display={c['d']} formula={c['f']} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
                 } else {
                     console.log("Bad cell - put a breakpoint here.")
                     cells.push(<SpreadsheetCell display="BAD CELL DATA" colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
@@ -378,20 +378,22 @@ class App extends React.Component {
         console.log("onCellEdited", this.state.current_id, "(", rowIdx, ",", colIdx, ")", " d=", display, " f=", formula);
 
         let value = formula ? '&f=' + encodeURIComponent(formula) : '&d=' + display;
-
+        let cell = this.state.data[rowIdx][colIdx];
         return fetch('/set-data'
             + '?id=' + this.state.current_id
             + value
             + '&row=' + rowIdx
-            + '&col=' + colIdx).then(
-                result => {
-                    if (result.status == 200) {
-                        this.getSpreadsheet(this.state.current_id);
-                    } else if (result.status == 400) {
-                        console.log("BAD REQUEST");
-                    }
+            + '&col=' + colIdx
+            + '&version=' + cell[2]
+        ).then(
+            result => {
+                if (result.status == 200) {
+                    this.getSpreadsheet(this.state.current_id);
+                } else {
+                    console.log("BAD REQUEST: ", result);
                 }
-            )
+            }
+        )
 
         // TODO - respond to the result of this call - the message could fail to calculate on the server.
         // TODO - remove the 'getSpreadsheet' and react to an 'on tick' from the web socket.
@@ -407,7 +409,27 @@ class App extends React.Component {
     }
 
     convertData(dataFromNode) {
+        // get table bounds
+        let max_row = 0;
+        let max_col = 0;
+        for (let idx = 0; idx < dataFromNode.length; idx++) {
+            let cell = dataFromNode[idx];
+            let rowIdx = cell[2];
+            let colIdx = cell[3];
+            max_row = Math.max(max_row, rowIdx + 1);
+            max_col = Math.max(max_col, colIdx + 1);
+        }
+
         let data = [];
+
+        for (let idx = 0; idx < max_row; idx++) {
+            let cols = [];
+            for (let j = 0; j < max_col; j++) {
+                cols.push([undefined, undefined, 0]);
+            }
+            data.push(cols);
+        }
+
         for (let idx = 0; idx < dataFromNode.length; idx++) {
             // unpack cell:
             let cell = dataFromNode[idx];
@@ -415,19 +437,13 @@ class App extends React.Component {
             let f = cell[1];
             let rowIdx = cell[2];
             let colIdx = cell[3];
-            // new row
-            if (rowIdx + 1 > data.length) {
-                data.push([]);
-            }
-            if (colIdx + 1 > data[rowIdx].length) {
-                data[rowIdx].push({ d: "", f: null });
-            }
-
-            data[rowIdx][colIdx] = [d, f]
+            let version = cell[4];
+            data[rowIdx][colIdx] = [d, f, version]
         }
         return data;
     }
 
+    // REST call
     getSpreadsheet(id) {
         fetch('/get-spreadsheet?id=' + id)
             .then(result => {
@@ -448,11 +464,13 @@ class App extends React.Component {
         fetch('/create-spreadsheet')
             .then(result => {
                 console.log(result);
-                //return result.json();
-                // })
-                // .then(json => {
+            //     console.log(result.body);
+            //     return result.json();
+            // })
+            // .then(data => {
                 this.getAllSpreadsheets();
-                // console.log(json);
+                // console.log(data);
+                // this.getSpreadsheet(json);
             });
     }
 
