@@ -60,6 +60,7 @@ class UpdateFormulaStateFlow(
         }
     }
 
+    @Suspendable
     private fun updateFormula(formulaStates: List<StateAndRef<FormulaState>>, valueStates: List<StateAndRef<ValueState>>, notaryToUse: Party) {
         val currentState = formulaStates.single { it.state.data.rowId == rowId && it.state.data.columnId == columnId }
         val newCanonicalValue = convertFormulaToUseStateRefs(newValue, valueStates)
@@ -87,6 +88,7 @@ class UpdateFormulaStateFlow(
         }
     }
 
+    @Suspendable
     private fun createFormula(spreadsheet: StateAndRef<SpreadsheetState>, valueStates: List<StateAndRef<ValueState>>, notaryToUse: Party) {
         val newCanonicalValue = convertFormulaToUseStateRefs(newValue, valueStates)
 
@@ -103,7 +105,7 @@ class UpdateFormulaStateFlow(
         txBuilder.addCommand(SpreadsheetContract.Commands.UpdateSpreadsheet(), otherParticipants.map { it.owningKey } + ourIdentity.owningKey)
 
         val partiallySignedTx = serviceHub.signInitialTransaction(txBuilder)
-        val sessions = newState.editors.map { initiateFlow(it) }
+        val sessions = otherParticipants.map { initiateFlow(it) }
         val fullySignedTx = subFlow(CollectSignaturesFlow(partiallySignedTx, sessions))
         subFlow(FinalityFlow(fullySignedTx, sessions))
     }
@@ -151,7 +153,7 @@ fun convertFormulaToUseSpreadsheetValues(originalValue: String, stateRefs: List<
 
 fun calculateFormulaValue(canonicalValue: String, stateRefs: List<StateAndRef<ValueState>>): String {
     val cellToValueMap = stateRefs.map { stateAndRef ->
-        val value = if(stateAndRef.state.data.data == "") "0" else stateAndRef.state.data.data
+        val value = if (stateAndRef.state.data.data == "") "0" else stateAndRef.state.data.data
         "_${stateAndRef.state.data.linearId.toString().replace("-", "_")}" to value
     }.toMap() as HashMap<String, String>
     return FormulaCalculator.calculateFormula(canonicalValue, cellToValueMap)
