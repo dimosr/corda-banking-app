@@ -312,6 +312,29 @@ class NavigationBar extends React.Component {
 }
 
 
+
+class Message extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+
+    render() {
+        if (!this.props.text || this.props.text === "") {
+            return (
+                <div></div>
+            );
+        } else {
+            return (
+                <Alert variant="warning">
+                    <p>{this.props.text}</p>
+                    <Button onClick={() => this.props.onClear()}>Clear</Button>
+                </Alert>
+            );
+        }
+    }
+}
+
+
 // Note that we always have to pass values and callbacks down to the sub components.  Watch out for 'this' scoping.
 // Use () => {... } for callbacks
 class App extends React.Component {
@@ -336,7 +359,7 @@ class App extends React.Component {
             current_id: "",
             spreadsheets: [],
             data: [],
-            nodeInfo: {}
+            text: ""
         };
 
         // We need to do all the binding malarkey so that the scope of 'this' is preserved.  Hurrah for Javascript.
@@ -346,6 +369,7 @@ class App extends React.Component {
         // this.openWebSocket = this.openWebSocket.bind(this);
         this.onCellEdited = this.onCellEdited.bind(this);
         this.convertData = this.convertData.bind(this);
+        this.clearMessage = this.clearMessage.bind(this);
     }
 
     render() {
@@ -359,6 +383,7 @@ class App extends React.Component {
                     onSelect={this.getSpreadsheet} />
 
                 <Spreadsheet data={this.state.data} onCellEdited={this.onCellEdited} />
+                <Message text={this.state.text} onClear={this.clearMessage} />
             </div>
         )
     }
@@ -370,6 +395,10 @@ class App extends React.Component {
         //     .then(() => nextThing())
         //     .then(() => nextThing())
         //     .then(() => nextThing());
+    }
+
+    clearMessage() {
+        this.setState({text: ""});
     }
 
     onCellEdited(rowIdx, colIdx, display, formula) {
@@ -388,12 +417,20 @@ class App extends React.Component {
         ).then(
             result => {
                 if (result.status == 200) {
-                    this.getSpreadsheet(this.state.current_id);
                 } else {
                     console.log("BAD REQUEST: ", result);
                 }
+                return result.json();
             }
-        )
+        ).then(json => {
+            if (json.status < 299) {
+                this.getSpreadsheet(this.state.current_id);
+            } else {
+                console.log(json);
+                let message = json.statusInfo + ' ' + json.entity;
+                this.setState({text: message});
+            }
+        });
 
         // TODO - respond to the result of this call - the message could fail to calculate on the server.
         // TODO - remove the 'getSpreadsheet' and react to an 'on tick' from the web socket.
@@ -464,10 +501,10 @@ class App extends React.Component {
         fetch('/create-spreadsheet')
             .then(result => {
                 console.log(result);
-            //     console.log(result.body);
-            //     return result.json();
-            // })
-            // .then(data => {
+                //     console.log(result.body);
+                //     return result.json();
+                // })
+                // .then(data => {
                 this.getAllSpreadsheets();
                 // console.log(data);
                 // this.getSpreadsheet(json);
