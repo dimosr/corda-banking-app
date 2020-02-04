@@ -39,7 +39,7 @@ class Spreadsheet extends React.Component {
         }
 
         return (<div class="pt-2">
-            <h6>Editing spreadsheet {this.props.id}</h6>
+            <h6>Editing: {this.props.id}</h6>
             <Table striped bordered hover>
                 <SpreadsheetHeader maxRowLength={maxRowLength} />
                 <SpreadsheetBody
@@ -140,6 +140,7 @@ class SpreadsheetCell extends React.Component {
         super(props);
         this.state = { editable: false }
         this.onEdit = this.onEdit.bind(this);
+        this.isFormula = this.isFormula.bind(this);
         console.log("Cell: row=", this.props.rowIdx, " col=", this.props.colIdx, "  display=", this.props.display, "  formula=", this.props.formula)
     }
 
@@ -160,10 +161,16 @@ class SpreadsheetCell extends React.Component {
     onCancel() {
         this.setState({ editable: false });
     }
+    isFormula() {
+        if (this.props.formula || this.props.formula === "") return true;
+        return false;
+    }
 
     render() {
         if (this.props.onCellEdited) {
+            // has a cell edit callback, so is a table cell.
             if (this.state.editable) {
+                // Display an edit box if we've set the state to editable.
                 return (<SpreadsheetEditCell
                     display={this.props.display}
                     formula={this.props.formula}
@@ -172,14 +179,15 @@ class SpreadsheetCell extends React.Component {
                     onCancel={() => this.onCancel()}
                     onCellEdited={(d, f) => this.onCellEdited(d, f)} />);
             } else {
-                let style = "bg-secondary";
-                if (this.props.display || this.props.formula || this.props.display === "" || this.props.formula === "") {
-                    style = "";
+                // Otherwise display the text
+                let style = this.props.ownedByNode ? "" : "bg-secondary";
+                let cb = () => this.onEdit();
+                if (this.props.ownedByNode !== true) {
+                    cb = () => {}; // noop
                 }
-                let cellIsFormula = " (=" + this.props.formula + ")";
-                if (!this.props.formula && this.props.formula !== "") cellIsFormula = "";
+                let cellIsFormula = this.isFormula() ? " (=" + this.props.formula + ")" : "";
                 return (
-                    <td className={style} onClick={() => this.onEdit()}>{this.props.display} {cellIsFormula}</td>
+                    <td className={style} onClick={cb}>{this.props.display} {cellIsFormula}</td>
                 );
             }
         } else {
@@ -200,7 +208,7 @@ class SpreadsheetBody extends React.Component {
         for (let rowIdx = 0; rowIdx < this.props.data.length; rowIdx++) {
             console.log("row ", rowIdx);
             rows.push(<SpreadsheetRow
-                data={this.props.data[rowIdx]}
+                data={this.props.data}
                 rowIdx={rowIdx}
                 maxRowLength={this.props.maxRowLength}
                 onCellEdited={this.props.onCellEdited} />);
@@ -225,10 +233,13 @@ class SpreadsheetRow extends React.Component {
     cells() {
         let cells = []
         for (let colIdx = 0; colIdx < this.props.maxRowLength; colIdx++) {
-            if (colIdx < this.props.data.length) {
-                let c = this.props.data[colIdx];
+            let data = this.props.data[this.props.rowIdx];
+            if (colIdx < data.length) {
+                let c = data[colIdx];
                 if (Array.isArray(c)) {
-                    cells.push(<SpreadsheetCell display={c[0]} formula={c[1]} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
+                    // 0 = row, 1 = col, 2 = version, 3 = owned by node.
+                    // TODO should really be a dict
+                    cells.push(<SpreadsheetCell display={c[0]} formula={c[1]} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} ownedByNode={c[3]} />);
                     // } else if (c instanceof Array) {
                     //     cells.push(<SpreadsheetCell display={c['d']} formula={c['f']} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
                 } else {
@@ -458,6 +469,9 @@ class App extends React.Component {
             .then(json => {
                 this.setState({ spreadsheets: json });
                 console.log(json);
+                if (Array.isArray(json) && json.length == 1) {
+                    this.setState({ current_id: json[0]});
+                }
             });
     }
 
@@ -480,7 +494,7 @@ class App extends React.Component {
         for (let idx = 0; idx < max_row; idx++) {
             let cols = [];
             for (let j = 0; j < max_col; j++) {
-                cols.push([undefined, undefined, 0]);
+                cols.push([undefined, undefined, 0, true]);
             }
             data.push(cols);
         }
@@ -493,7 +507,8 @@ class App extends React.Component {
             let rowIdx = cell[2];
             let colIdx = cell[3];
             let version = cell[4];
-            data[rowIdx][colIdx] = [d, f, version]
+            let ownedByNode = cell[5]; // simply to make a cell readonly if site served from this node
+            data[rowIdx][colIdx] = [d, f, version, ownedByNode]
         }
         return data;
     }
