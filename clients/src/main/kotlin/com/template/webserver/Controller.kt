@@ -48,7 +48,9 @@ class Controller(rpc: NodeRPCConnection) {
             RenderableCell(state.rowId, state.columnId, null, state.formula)
         }
 
-        val res = renderableCells.sortedWith(compareBy({ it.row }, { it.col })).map { listOf(it.d, it.f) }
+        val res = renderableCells.sortedWith(compareBy({ it.row }, { it.col })).map {
+            listOf(it.d, it.f, it.row, it.col)
+        }
         objectMapper.writeValueAsString(res)
     } catch (e: Exception) {
         Response.status(Response.Status.BAD_REQUEST).entity(e.message).build()
