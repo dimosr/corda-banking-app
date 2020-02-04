@@ -33,7 +33,6 @@ class Spreadsheet extends React.Component {
         }
 
         console.log("Max row length", maxRowLength);
-        console.log("oncelleedited", this.props.onCellEdited)
 
         return (<div class="pt-2">
             <h6>Spreadsheet {this.props.spreadsheetNumber}</h6>
@@ -325,6 +324,7 @@ class App extends React.Component {
         this.getAllSpreadsheets = this.getAllSpreadsheets.bind(this);
         // this.openWebSocket = this.openWebSocket.bind(this);
         this.onCellEdited = this.onCellEdited.bind(this);
+        this.convertData = this.convertData.bind(this);
     }
 
     render() {
@@ -383,6 +383,28 @@ class App extends React.Component {
             });
     }
 
+    convertData(dataFromNode) {
+        let data = [];
+        for (let idx = 0 ; idx < dataFromNode.length ; idx++) {
+            // unpack cell:
+            let cell = dataFromNode[idx];
+            let d = cell[0];
+            let f = cell[1];
+            let rowIdx = cell[2];
+            let colIdx = cell[3];
+            // new row
+            if (rowIdx + 1 > data.length) {
+                data.push([]);
+            }
+            if (colIdx + 1 > data[rowIdx].length) {
+                data[rowIdx].push({d: "", f: null});
+            }
+
+            data[rowIdx][colIdx] = [d,f]
+        }
+        return data;
+    }
+
     getSpreadsheet(id) {
         fetch('/get-spreadsheet?id=' + id)
             .then(result => {
@@ -391,8 +413,9 @@ class App extends React.Component {
             })
             .then(data => {
                 console.log("SHEET DATA", data);
+                let d = this.convertData(data);
                 this.setState({
-                    data: data,
+                    data: d,
                     current_id: id
                 });
             });
