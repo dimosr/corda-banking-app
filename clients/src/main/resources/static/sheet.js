@@ -12,7 +12,7 @@ let Row = ReactBootstrap.Row;
 let Col = ReactBootstrap.Col;
 let Container = ReactBootstrap.Container;
 let Table = ReactBootstrap.Table;
-let Dropdown = ReactBootstrap.Dropdown;
+let Modal = ReactBootstrap.Modal;
 
 class Spreadsheet extends React.Component {
     constructor(props) {
@@ -25,21 +25,21 @@ class Spreadsheet extends React.Component {
             return <div></div>;
         }
 
-        let columnCount = 0;
+        let maxRowLength = 0;
 
         for (let i = 0; i < this.props.data.length; i++) {
-            if (this.props.data[i].length > columnCount) {
-                columnCount = this.props.data[i].length
+            if (this.props.data[i].length > maxRowLength) {
+                maxRowLength = this.props.data[i].length
             }
         }
 
-        console.log(columnCount);
+        console.log(maxRowLength);
 
         return (<div class="pt-2">
             <h6>Spreadsheet {this.props.spreadsheetNumber}</h6>
             <Table striped bordered hover>
-                <SpreadsheetHeader columnCount={columnCount} />
-                <SpreadsheetBody data={this.props.data} onCellEdited={this.props.onCellEdited} />
+                <SpreadsheetHeader maxRowLength={maxRowLength} />
+                <SpreadsheetBody data={this.props.data} onCellEdited={this.props.onCellEdited} maxRowLength={maxRowLength} />
             </Table>
         </div>);
     }
@@ -53,7 +53,7 @@ class SpreadsheetHeader extends React.Component {
 
     headers() {
         let children = [];
-        for (let colIdx = 0; colIdx < this.props.columnCount; colIdx++) {
+        for (let colIdx = 0; colIdx < this.props.maxRowLength; colIdx++) {
             children.push(<SpreadsheeHeaderCell value={String.fromCharCode(97 + colIdx)} />);
         }
         // Insert a 'blank' root cell.
@@ -110,7 +110,11 @@ class SpreadsheetBody extends React.Component {
         let rows = []
         for (let rowIdx = 0; rowIdx < this.props.data.length; rowIdx++) {
             console.log("row ", rowIdx);
-            rows.push(<SpreadsheetRow data={this.props.data[rowIdx]} rowIdx={rowIdx} onCellEdited={this.props.onCellEdited} />);
+            rows.push(<SpreadsheetRow
+                data={this.props.data[rowIdx]}
+                rowIdx={rowIdx}
+                maxRowLength={this.props.maxRowLength}
+                onCellEdited={this.props.onCellEdited} />);
         }
         return rows;
     }
@@ -131,9 +135,20 @@ class SpreadsheetRow extends React.Component {
 
     cells() {
         let cells = []
-        for (let colIdx = 0; colIdx < this.props.data.length; colIdx++) {
-            let c = this.props.data[colIdx];
-            cells.push(<SpreadsheetCell display={c['d']} formula={c['f']} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
+        for (let colIdx = 0; colIdx < this.props.maxRowLength; colIdx++) {
+            if (colIdx < this.props.data.length) {
+                let c = this.props.data[colIdx];
+                if (c instanceof Object || c instanceof Map) {
+                    cells.push(<SpreadsheetCell display={c['d']} formula={c['f']} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
+                } else if (c instanceof Array) {
+                    cells.push(<SpreadsheetCell display={c[0]} formula={c[1]} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
+                } else {
+                    console.log("Bad cell - put a breakpoint here.")
+                    cells.push(<SpreadsheetCell display="BAD CELL DATA" colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
+                }
+            } else {
+                cells.push(<SpreadsheetCell display="&nbsp;" colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
+            }
         }
         cells.unshift(<SpreadsheetCell display={this.props.rowIdx + 1} />);
         return cells;
@@ -173,7 +188,8 @@ class ListOfSpreadsheets extends React.Component {
 
     onSelect(obj) {
         console.log(obj);
-        this.props.onSelect(obj);
+        console.log("Target: ", obj.target);
+        this.props.onSelect(obj.currentTarget.value);
     }
 
     createChildren() {
@@ -304,9 +320,15 @@ class App extends React.Component {
     }
 
     getSpreadsheet(id) {
-        fetch('/get-spreadsheet&id=' + id)
-            .then(result => result.json())
-            .then(data => this.setState({ data: data }));
+        fetch('/get-spreadsheet?id=' + id)
+            .then(result => {
+                console.log(result);
+                return result.json();
+            })
+            .then(data => {
+                console.log("SHEET DATA", data);
+                this.setState({ data: data });
+            });
     }
 
     newSpreadsheet() {
