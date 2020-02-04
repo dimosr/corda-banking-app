@@ -28,6 +28,7 @@ class DriverBasedTest {
 
     @Test
     fun `test happy path`() = withDriver {
+
         // Start a pair of nodes and wait for them both to be ready.
         val (partyAHandle, partyBHandle) = startNodes(bankA, bankB)
         val ourIdentity = partyAHandle.nodeInfo.legalIdentities.first()
@@ -52,9 +53,9 @@ class DriverBasedTest {
         assertEquals("12", ourState.state.data.data)
 
         val formulaState = spreadsheetDto.formulaStates.first().first.state.data
-        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1+B1", formulaState.version).returnValue.get()
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1+A2", formulaState.version).returnValue.get()
         spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
-        assertEquals("A1+B1", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
+        assertEquals("A1+A2", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
     }
 
     @Test
@@ -117,15 +118,15 @@ class DriverBasedTest {
         partyBHandle.rpc.startFlow(::UpdateValueStateFlow, spreadsheetDto.linearId, theirState.state.data.rowId, theirState.state.data.columnId,  "5", ourState.state.data.version).returnValue.get()
 
         var formulaState = spreadsheetDto.formulaStates.first().first.state.data
-        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1+B1", formulaState.version).returnValue.get()
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1+A2", formulaState.version).returnValue.get()
         spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
-        assertEquals("A1+B1", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
+        assertEquals("A1+A2", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
         assertEquals(17, spreadsheetDto.formulaStates.first().second.toFloat().toInt())
 
         formulaState = spreadsheetDto.formulaStates.first().first.state.data
-        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1*B1", formulaState.version).returnValue.get()
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1*A2", formulaState.version).returnValue.get()
         spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
-        assertEquals("A1*B1", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
+        assertEquals("A1*A2", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
         assertEquals(60, spreadsheetDto.formulaStates.first().second.toFloat().toInt())
     }
 

@@ -94,8 +94,14 @@ fun convertFormulaToUseStateRefs(originalValue: String, stateRefs: List<StateAnd
     var calculatedValue = originalValue
     stateRefs.forEach { stateAndRef ->
         val stateRefIdentifier = "_${stateAndRef.ref.txhash}_${stateAndRef.ref.index}"
-        val spreadsheetIdentifier = "${INDEX_TO_CHARACTERS_MAP[stateAndRef.state.data.rowId]}${stateAndRef.state.data.columnId + 1}"
-        calculatedValue = calculatedValue.replace(spreadsheetIdentifier, stateRefIdentifier)
+        val spreadsheetIdentifier = "${INDEX_TO_CHARACTERS_MAP[stateAndRef.state.data.columnId]}${stateAndRef.state.data.rowId + 1}"
+        // using double replace to avoid identifying spreadsheet identifiers inside stateref hashes
+        calculatedValue = calculatedValue.replace(spreadsheetIdentifier, "($spreadsheetIdentifier)")
+    }
+    stateRefs.forEach { stateAndRef ->
+        val stateRefIdentifier = "_${stateAndRef.ref.txhash}_${stateAndRef.ref.index}"
+        val spreadsheetIdentifier = "${INDEX_TO_CHARACTERS_MAP[stateAndRef.state.data.columnId]}${stateAndRef.state.data.rowId + 1}"
+        calculatedValue = calculatedValue.replace("($spreadsheetIdentifier)", stateRefIdentifier)
     }
     return calculatedValue
 }
@@ -104,7 +110,7 @@ fun convertFormulaToUseSpreadsheetValues(originalValue: String, stateRefs: List<
     var calculatedValue = originalValue
     stateRefs.forEach { stateAndRef ->
         val stateRefIdentifier = "_${stateAndRef.ref.txhash}_${stateAndRef.ref.index}"
-        val spreadsheetIdentifier = "${INDEX_TO_CHARACTERS_MAP[stateAndRef.state.data.rowId]}${stateAndRef.state.data.columnId + 1}"
+        val spreadsheetIdentifier = "${INDEX_TO_CHARACTERS_MAP[stateAndRef.state.data.columnId]}${stateAndRef.state.data.rowId + 1}"
         calculatedValue = calculatedValue.replace(stateRefIdentifier, spreadsheetIdentifier)
     }
     return calculatedValue
