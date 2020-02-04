@@ -34,7 +34,7 @@ class Spreadsheet extends React.Component {
 
         console.log(columnCount);
 
-        return (<div>
+        return (<div class="pt-2">
             <h6>Spreadsheet {this.props.spreadsheetNumber}</h6>
             <Table striped bordered hover>
                 <SpreadsheetHeader columnCount={columnCount} />
@@ -43,7 +43,6 @@ class Spreadsheet extends React.Component {
         </div>);
     }
 }
-
 
 class SpreadsheetHeader extends React.Component {
     constructor(props) {
@@ -146,16 +145,39 @@ class SpreadsheetRow extends React.Component {
     }
 }
 
+class Spreadsheets extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+
+    render() {
+        return (
+            <div class="pt-2">
+                <ListOfSpreadsheets spreadsheets={this.props.spreadsheets} onSelect={this.props.onSelected} />
+                <div class="pt-2 pb-2">
+                    <Button onClick={() => this.props.onClick()}>New spreadsheet</Button>
+                </div>
+            </div>
+        );
+    }
+
+}
 
 class ListOfSpreadsheets extends React.Component {
     constructor(props) {
         super(props);
         this.createChildren = this.createChildren.bind(this);
+        this.onSelected = this.onSelected.bind(this);
+    }
+
+    onSelected(obj) {
+        console.log(obj);
+        this.props.onSelected(obj);
     }
 
     createChildren() {
         let children = []
-        for (let i = 0; i < this.props.numberOfSpreadsheets; i++) {
+        for (let i = 0; i < this.props.spreadsheets; i++) {
             children.push(<option>{i}</option>)
         }
         return children
@@ -165,7 +187,7 @@ class ListOfSpreadsheets extends React.Component {
         return (
             <Form.Group controlId={this.props.controlId}>
                 <Form.Label>{this.props.title ? this.props.title : "Spreadsheet"}</Form.Label>
-                <Form.Control as="select">
+                <Form.Control as="select" onChange={this.onSelected}>
                     {this.createChildren()}
                 </Form.Control>
             </Form.Group>
@@ -179,20 +201,12 @@ class NavigationBar extends React.Component {
         super(props);
     }
 
-    name() {
-        if (this.props.nodeInfo.legalIdentitiesAndCerts) {
-            return "(" + this.props.nodeInfo.legalIdentitiesAndCerts[0] + ")"
-        }
-
-        return "";
-    }
-
     render() {
         return (
             <NavBar bg="light" expand="lg">
                 <NavBar.Brand>
                     <img src='/corda.png' height="30" className="d-inline-block align-top" alt='corda' />
-                    &nbsp; Spreadsheet {this.name()}
+                    &nbsp; Spreadsheet
                 </NavBar.Brand>
             </NavBar>
         )
@@ -207,7 +221,7 @@ class App extends React.Component {
         super(props);
 
         this.state = {
-            numberOfSpreadsheets: 0,
+            spreadsheets: [],
             data: [
                 [
                     { d: '55', f: 'A1+A2' },
@@ -217,13 +231,18 @@ class App extends React.Component {
                     { d: '44', f: 'B1+B2' },
                     { d: '33', f: null },
                     { d: '22', f: null }
+                ],
+                [
+                    { d: '44', f: null }
                 ]
             ],
             nodeInfo: {}
         };
 
         // We need to do all the binding malarkey so that the scope of 'this' is preserved.  Hurrah for Javascript.
-        this.getNumberOfSpreadsheets = this.getNumberOfSpreadsheets.bind(this);
+        this.newSpreadsheet = this.newSpreadsheet.bind(this);
+        this.getSpreadsheet = this.getSpreadsheet.bind(this);
+        this.getAllSpreadsheets = this.getAllSpreadsheets.bind(this);
         // this.openWebSocket = this.openWebSocket.bind(this);
         this.onCellEdited = this.onCellEdited.bind(this);
     }
@@ -231,9 +250,9 @@ class App extends React.Component {
     render() {
         return (
             <div>
-                <NavigationBar nodeInfo={this.state.nodeInfo} />
+                <NavigationBar />
 
-                <ListOfSpreadsheets numberOfSpreadsheets={this.state.numberOfSpreadsheets} />
+                <Spreadsheets spreadsheets={this.state.spreadsheets} onClick={this.newSpreadsheet} onSelect={this.getSpreadsheet} />
 
                 <Spreadsheet data={this.state.data} onCellEdited={this.onCellEdited} />
             </div>
@@ -242,17 +261,11 @@ class App extends React.Component {
 
     /// When we're ready, dispatch calls to the web server.
     componentDidMount() {
-        this.getNumberOfSpreadsheets();
+        this.getAllSpreadsheets();
         // If REST....
         //     .then(() => nextThing())
         //     .then(() => nextThing())
         //     .then(() => nextThing());
-    }
-
-    getNodeInfo() {
-        // return fetch('/nodeInfo')
-        //     .then(result => result.json())
-        //     .then(nodeInfo => this.setState({nodeInfo: nodeInfo}));
     }
 
     onCellEdited(sheetIdx, rowIdx, colIdx, display, formula) {
@@ -277,18 +290,24 @@ class App extends React.Component {
         // TODO - remove the 'getSpreadsheet' and react to an 'on tick' from the web socket.
     }
 
-    getNumberOfSpreadsheets() {
-        // TODO:  make a REST call
-        this.setState({ numberOfSpreadsheets: 1 });
-        return 1;
+    getAllSpreadsheets() {
+        return fetch('/get-all-spreadsheets')
+            .then(result => result.json())
+            .then(json => {
+                this.setState({ spreadsheets: json });
+                console.log(json);
+            });
     }
 
-    getSpreadsheet() {
-        // idx = 0
-        // TODO:  replace with exact name
-        fetch('/spreadsheet')
+    getSpreadsheet(id) {
+        fetch('/get-spreadsheet&id=' + id)
             .then(result => result.json())
-            .then(data => this.setState({data: data}));
+            .then(data => this.setState({ data: data }));
+    }
+
+    newSpreadsheet() {
+        fetch('/create-spreadsheet')
+            .then(result => console.log(result));
     }
 
     openWebSocket() {
