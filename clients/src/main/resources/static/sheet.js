@@ -92,7 +92,7 @@ class SpreadsheetEditCell extends React.Component {
 
     //  prefix formula with '='
     render() {
-        let placeholder = this.props.formula !== undefined ? "=" + this.props.formula : this.props.display;
+        let placeholder = this.props.formula ? "=" + this.props.formula : this.props.display;
         return (
             <td>
                 <span>
@@ -105,6 +105,9 @@ class SpreadsheetEditCell extends React.Component {
                             </Col>
                             <Col>
                                 <Button type='submit'>Update</Button>
+                            </Col>
+                            <Col>
+                                <Button onClick={() => this.props.onCancel()}>Cancel</Button>
                             </Col>
                         </Form.Row>
                     </Form>
@@ -120,9 +123,9 @@ class SpreadsheetEditCell extends React.Component {
         let value = form.elements.cellValue.value;
         if (value.startsWith("=")) {
             // is a formula
-            this.props.onCellEdited(null, value.substr(1));
+            this.props.onCellEdited(undefined, value.substr(1));
         } else {
-            this.props.onCellEdited(value, null);
+            this.props.onCellEdited(value, undefined);
         }
     }
 }
@@ -149,6 +152,10 @@ class SpreadsheetCell extends React.Component {
         this.setState({ editable: false });
     }
 
+    onCancel() {
+        this.setState({ editable: false });
+    }
+
     render() {
         if (this.props.onCellEdited) {
             if (this.state.editable) {
@@ -157,10 +164,15 @@ class SpreadsheetCell extends React.Component {
                     formula={this.props.formula}
                     colIdx={this.props.colIdx}
                     rowIdx={this.props.rowIdx}
+                    onCancel={() => this.onCancel()}
                     onCellEdited={(d, f) => this.onCellEdited(d, f)} />);
             } else {
+                let style = "bg-secondary";
+                if (this.props.display || this.props.formula) {
+                    style = "";
+                }
                 return (
-                    <td onClick={() => this.onEdit()}>{this.props.display}</td>
+                    <td className={style} onClick={() => this.onEdit()}>{this.props.display}</td>
                 );
             }
         } else {
@@ -365,7 +377,7 @@ class App extends React.Component {
 
         console.log("onCellEdited", this.state.current_id, "(", rowIdx, ",", colIdx, ")", " d=", display, " f=", formula);
 
-        let value = formula !== null ? '&f=' + formula : '&d=' + display;
+        let value = formula ? '&f=' + encodeURIComponent(formula) : '&d=' + display;
 
         return fetch('/set-data'
             + '?id=' + this.state.current_id
