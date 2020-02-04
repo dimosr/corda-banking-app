@@ -49,7 +49,7 @@ class Controller(rpc: NodeRPCConnection) {
         }
 
         val res = renderableCells.sortedWith(compareBy({ it.row }, { it.col })).map {
-            listOf(it.d, it.f, it.row, it.col, it.version)
+            listOf(it.d, it.f, it.row, it.col, it.version, it.owner)
         }
         objectMapper.writeValueAsString(res)
     } catch (e: Exception) {
