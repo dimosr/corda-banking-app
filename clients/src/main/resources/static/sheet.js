@@ -34,8 +34,12 @@ class Spreadsheet extends React.Component {
 
         console.log("Max row length", maxRowLength);
 
+        if (! this.props.data) {
+            return (<div></div>);
+        }
+        
         return (<div class="pt-2">
-            <h6>Spreadsheet {this.props.spreadsheetNumber}</h6>
+            <h6>Editing spreadsheet {this.props.id}</h6>
             <Table striped bordered hover>
                 <SpreadsheetHeader maxRowLength={maxRowLength} />
                 <SpreadsheetBody
@@ -366,7 +370,6 @@ class App extends React.Component {
         this.newSpreadsheet = this.newSpreadsheet.bind(this);
         this.getSpreadsheet = this.getSpreadsheet.bind(this);
         this.getAllSpreadsheets = this.getAllSpreadsheets.bind(this);
-        // this.openWebSocket = this.openWebSocket.bind(this);
         this.onCellEdited = this.onCellEdited.bind(this);
         this.convertData = this.convertData.bind(this);
         this.clearMessage = this.clearMessage.bind(this);
@@ -382,7 +385,7 @@ class App extends React.Component {
                     onClick={this.newSpreadsheet}
                     onSelect={this.getSpreadsheet} />
 
-                <Spreadsheet data={this.state.data} onCellEdited={this.onCellEdited} />
+                <Spreadsheet data={this.state.data} onCellEdited={this.onCellEdited} id={this.state.current_id} />
                 <Message text={this.state.text} onClear={this.clearMessage} />
             </div>
         )
@@ -398,27 +401,28 @@ class App extends React.Component {
     }
 
     clearMessage() {
-        this.setState({text: ""});
+        this.setState({ text: "" });
     }
 
     onCellEdited(rowIdx, colIdx, display, formula) {
-        // Don't store the state here, just send it back to the server.
-
         console.log("onCellEdited", this.state.current_id, "(", rowIdx, ",", colIdx, ")", " d=", display, " f=", formula);
 
         let value = formula ? '&f=' + encodeURIComponent(formula) : '&d=' + display;
         let cell = this.state.data[rowIdx][colIdx];
-        return fetch('/set-data'
+
+        let url = '/set-data'
             + '?id=' + this.state.current_id
             + value
             + '&row=' + rowIdx
             + '&col=' + colIdx
-            + '&version=' + cell[2]
+            + '&version=' + cell[2];
+
+        return fetch(url
         ).then(
             result => {
-                if (result.status == 200) {
-                } else {
+                if (result.status > 299) {
                     console.log("BAD REQUEST: ", result);
+                    return;
                 }
                 return result.json();
             }
@@ -428,7 +432,7 @@ class App extends React.Component {
             } else {
                 console.log(json);
                 let message = json.statusInfo + ' ' + json.entity;
-                this.setState({text: message});
+                this.setState({ text: message });
             }
         });
 
@@ -482,13 +486,17 @@ class App extends React.Component {
 
     // REST call
     getSpreadsheet(id) {
+        if (!id) {
+            console.log("Invalid spreadsheet id");
+            return;
+        }
         fetch('/get-spreadsheet?id=' + id)
             .then(result => {
                 console.log(result);
                 return result.json();
             })
             .then(data => {
-                console.log("SHEET DATA = ", data);
+                console.log("getSpreadsheet= ", data);
                 let d = this.convertData(data);
                 this.setState({
                     data: d,
@@ -501,27 +509,17 @@ class App extends React.Component {
         fetch('/create-spreadsheet')
             .then(result => {
                 console.log(result);
-                //     console.log(result.body);
-                //     return result.json();
-                // })
-                // .then(data => {
+                return result.json();
+            })
+            .then(json => {
                 this.getAllSpreadsheets();
-                // console.log(data);
-                // this.getSpreadsheet(json);
+                console.log(json);
+                if (Array.isArray(json)) {
+                    this.getSpreadsheet(json[0]);
+                } else {
+                    this.getSpreadsheet(json['id'])
+                }
+
             });
-    }
-
-    openWebSocket() {
-        // TODO = the magic
-        let socket = new WebSocket("ws://" + location.host + "/ws");
-
-        socket.onmessage = (msg) => {
-            if (msg.data === "refresh") {
-                this.getNumberOfSpreadsheets();
-                this.getSpreadsheet();
-            } else {
-                console.log('Unknown command from server:  ' + msg);
-            }
-        };
     }
 }
