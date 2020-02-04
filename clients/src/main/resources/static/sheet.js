@@ -176,11 +176,14 @@ class SpreadsheetCell extends React.Component {
                 if (this.props.display || this.props.formula || this.props.display === "" || this.props.formula === "") {
                     style = "";
                 }
+                let cellIsFormula = " (=" + this.props.formula + ")";
+                if (!this.props.formula && this.props.formula !== "") cellIsFormula = "";
                 return (
-                    <td className={style} onClick={() => this.onEdit()}>{this.props.display}</td>
+                    <td className={style} onClick={() => this.onEdit()}>{this.props.display} {cellIsFormula}</td>
                 );
             }
         } else {
+            // really handles the row number column.
             return <td>{this.props.display}</td>
         }
     }
@@ -431,7 +434,7 @@ class App extends React.Component {
             }
         ).then(json => {
             if (! json) return;
-                        
+
             if ('status' in json && json.status < 299) {
                 this.getSpreadsheet(this.state.current_id);
             } else {
