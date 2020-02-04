@@ -42,4 +42,10 @@ class FormulaContractTests {
         val result = FormulaCalculator.calculateFormula("0.1+9", cellToValueMap)
         assertEquals("9.1", result)
     }
+
+    @Test
+    fun test_calculateFormula_invalidFormula() {
+        val result = FormulaCalculator.calculateFormula("1+2(", cellToValueMap)
+        assertEquals(FormulaCalculator.invalidFormulaErrorMessage, result)
+    }
 }

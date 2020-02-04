@@ -50,29 +50,35 @@ class FormulaCalculator { // TODO: handle empty cells
     companion object {
         private val engine = ScriptEngineManager().getEngineByName("JavaScript")
         private val cellIdentifierRegex = Regex("[A-Z]+_[0-9]+")
+        val invalidFormulaErrorMessage = "INVALID FORMULA"
 
         fun calculateFormula(formula: String, cellToValueMap: HashMap<String, String>): String {
-            if (formula == "")
-                return ""
-
-            val bindings = SimpleBindings()
-            for ((cellName, cellValue) in cellToValueMap) {
-                if (cellValue == "") {
-                    bindings[cellName] = 0
-                } else {
-                    bindings[cellName] = cellValue.toFloat()
-                }
-            }
-
-            var result: Any
             try {
-                result = engine.eval(formula, bindings)
-            } catch (e: ScriptException) {
-                val fixedFormula = replaceUnknownCellValuesWith0(formula)
-                result = engine.eval(fixedFormula, bindings)
+                if (formula == "")
+                    return ""
+
+                val bindings = SimpleBindings()
+                for ((cellName, cellValue) in cellToValueMap) {
+                    if (cellValue == "") {
+                        bindings[cellName] = 0
+                    } else {
+                        bindings[cellName] = cellValue.toFloat()
+                    }
+                }
+
+                var result: Any
+                try {
+                    result = engine.eval(formula, bindings)
+                } catch (e: ScriptException) {
+                    val fixedFormula = replaceUnknownCellValuesWith0(formula)
+                    result = engine.eval(fixedFormula, bindings)
+                }
+
+                return prepareResultString(result)
+            } catch (e: Exception) {
+                return invalidFormulaErrorMessage
             }
 
-            return prepareResultString(result)
         }
 
         fun replaceUnknownCellValuesWith0(formula: String): String {
