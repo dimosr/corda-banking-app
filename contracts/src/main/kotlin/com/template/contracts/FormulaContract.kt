@@ -81,7 +81,54 @@ class FormulaCalculator { // TODO: handle empty cells
         }
 
         fun replaceUnknownCellValuesWith0(formula: String): String {
-            return formula.replace(cellIdentifierRegex, "0")
+            var fixedFormula = formula
+
+            var regex = Regex("""^[A-Z]+[0-9]+$""")
+            var match = regex.find(fixedFormula)
+            if(match != null) {
+                fixedFormula = "[" + formula + "]"
+            }
+
+            regex = Regex("""^[A-Z]+[0-9]+[\+\*\\-]""")
+            match = regex.find(fixedFormula)
+            if(match != null) {
+                val last = match.groups[0]?.range?.last
+                val length = last!!
+
+                val part1 = fixedFormula.substring(0, last)
+                val part2 = fixedFormula.substring(last)
+
+                fixedFormula = "[" + part1 + "]" + part2
+            }
+
+            regex = Regex("""[\+\*\\-][A-Z]+[0-9]+[\+\*\\-]""")
+            match = regex.find(fixedFormula)
+            while(match != null) {
+                val first = match.groups[0]?.range?.first
+                val last = match.groups[0]?.range?.last
+                val length = last!! - first!! + 1
+
+                val part1 = fixedFormula.substring(0, first+1)
+                val part2 = fixedFormula.substring(first+1, last)
+                val part3 = fixedFormula.substring(last)
+
+                fixedFormula = part1 + "[" + part2 + "]" + part3
+                match = regex.find(fixedFormula)
+            }
+
+            regex = Regex("""[\+\*\\-][A-Z]+[0-9]+$""")
+            match = regex.find(fixedFormula)
+            if(match != null) {
+                val first = match.groups[0]?.range?.first
+                val length = first!! + 1
+
+                val part1 = fixedFormula.substring(0, first+1)
+                val part2 = fixedFormula.substring(first+1)
+
+                fixedFormula = part1 + "[" + part2 + "]"
+            }
+
+            return fixedFormula.replace(Regex("""\[[A-Z]+[0-9]+\]"""), "0")
         }
 
         fun prepareResultString(result: Any): String {

@@ -48,4 +48,11 @@ class FormulaContractTests {
         val result = FormulaCalculator.calculateFormula("1+2(", cellToValueMap)
         assertEquals(FormulaCalculator.invalidFormulaErrorMessage, result)
     }
+
+    @Test
+    fun test_replaceUnknownCellValuesWith0() {
+        val result = FormulaCalculator.replaceUnknownCellValuesWith0(
+                "A1+_A3258E669441E0081FC9C386E18142C7A85F7CBB49C6F3B60997E66242CFF2DC_0+B1+C1")
+        assertEquals("0+_A3258E669441E0081FC9C386E18142C7A85F7CBB49C6F3B60997E66242CFF2DC_0+0+0", result)
+    }
 }

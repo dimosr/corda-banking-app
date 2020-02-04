@@ -1,5 +1,6 @@
 package com.template
 
+import com.template.contracts.FormulaCalculator
 import com.template.flows.ConcurrentModificationException
 import com.template.flows.CreateSpreadsheetFlow
 import com.template.flows.GetAllSpreadsheetsFlow
@@ -128,6 +129,24 @@ class DriverBasedTest {
         spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
         assertEquals("A1*A2", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
         assertEquals(60, spreadsheetDto.formulaStates.first().second.toFloat().toInt())
+
+        formulaState = spreadsheetDto.formulaStates.first().first.state.data
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1)B1", formulaState.version).returnValue.get()
+        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
+        assertEquals("A1)B1", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
+        assertEquals(FormulaCalculator.invalidFormulaErrorMessage, spreadsheetDto.formulaStates.first().second)
+
+        formulaState = spreadsheetDto.formulaStates.first().first.state.data
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1+B1", formulaState.version).returnValue.get()
+        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
+        assertEquals("A1+B1", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
+        assertEquals(12, spreadsheetDto.formulaStates.first().second.toFloat().toInt())
+
+        formulaState = spreadsheetDto.formulaStates.first().first.state.data
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1+3", formulaState.version).returnValue.get()
+        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
+        assertEquals("A1+3", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
+        assertEquals(15, spreadsheetDto.formulaStates.first().second.toFloat().toInt())
     }
 
     @Test
