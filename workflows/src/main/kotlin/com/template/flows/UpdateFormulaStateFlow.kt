@@ -55,6 +55,7 @@ class UpdateFormulaStateFlow(
         }
     }
 
+    @Suspendable
     private fun updateFormula(formulaStates: List<StateAndRef<FormulaState>>, notaryToUse: Party) {
         val currentState = formulaStates.single { it.state.data.rowId == rowId && it.state.data.columnId == columnId }
 
@@ -83,6 +84,7 @@ class UpdateFormulaStateFlow(
         }
     }
 
+    @Suspendable
     private fun createFormula(spreadsheet: StateAndRef<SpreadsheetState>, notaryToUse: Party) {
         val txBuilder = TransactionBuilder(notaryToUse)
 

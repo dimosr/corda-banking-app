@@ -10,6 +10,7 @@ import com.template.states.SpreadsheetState
 import com.template.states.ValueState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
@@ -17,6 +18,7 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.lang.IllegalArgumentException
 import java.util.*
@@ -49,6 +51,7 @@ class UpdateValueStateFlow(
         }
     }
 
+    @Suspendable
     private fun updateValue(valueStates: List<StateAndRef<ValueState>>, notaryToUse: Party) {
         val currentState = valueStates.single { it.state.data.rowId == rowId && it.state.data.columnId == columnId }
 
@@ -68,6 +71,7 @@ class UpdateValueStateFlow(
         subFlow(FinalityFlow(fullySignedTx, sessions))
     }
 
+    @Suspendable
     private fun createValue(spreadsheet: StateAndRef<SpreadsheetState>, notaryToUse: Party) {
         val txBuilder = TransactionBuilder(notaryToUse)
 
@@ -114,7 +118,13 @@ fun retrieveFormulaState(valueStateId: UniqueIdentifier, vaultService: VaultServ
 class UpdateValueStateFlowResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        subFlow(ReceiveFinalityFlow(counterpartySession))
+        val signFlow = object : SignTransactionFlow(counterpartySession) {
+            @Suspendable
+            override fun checkTransaction(stx: SignedTransaction) = requireThat {}
+        }
+        val signedTx = subFlow(signFlow)
+
+        subFlow(ReceiveFinalityFlow(counterpartySession, signedTx.id))
     }
 }
 
