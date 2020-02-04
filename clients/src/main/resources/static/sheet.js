@@ -34,10 +34,10 @@ class Spreadsheet extends React.Component {
 
         console.log("Max row length", maxRowLength);
 
-        if (! this.props.data) {
+        if (! this.props.data || this.props.data.length === 0) {
             return (<div></div>);
         }
-        
+
         return (<div class="pt-2">
             <h6>Editing spreadsheet {this.props.id}</h6>
             <Table striped bordered hover>
@@ -47,6 +47,7 @@ class Spreadsheet extends React.Component {
                     onCellEdited={this.props.onCellEdited}
                     maxRowLength={maxRowLength} />
             </Table>
+            <p>Enter formula with a leading '=', e.g. <code>=A1+B2</code></p>
         </div>);
     }
 }
@@ -100,7 +101,7 @@ class SpreadsheetEditCell extends React.Component {
         return (
             <td>
                 <span>
-                    <Form onSubmit={this.handleSubmit}>
+                    <Form inline onSubmit={this.handleSubmit}>
                         <Form.Row>
                             <Col>
                                 <Form.Group controlId='cellValue'>
@@ -363,7 +364,7 @@ class App extends React.Component {
             current_id: "",
             spreadsheets: [],
             data: [],
-            text: ""
+            message: ""
         };
 
         // We need to do all the binding malarkey so that the scope of 'this' is preserved.  Hurrah for Javascript.
@@ -386,7 +387,7 @@ class App extends React.Component {
                     onSelect={this.getSpreadsheet} />
 
                 <Spreadsheet data={this.state.data} onCellEdited={this.onCellEdited} id={this.state.current_id} />
-                <Message text={this.state.text} onClear={this.clearMessage} />
+                <Message text={this.state.message} onClear={this.clearMessage} />
             </div>
         )
     }
@@ -401,7 +402,7 @@ class App extends React.Component {
     }
 
     clearMessage() {
-        this.setState({ text: "" });
+        this.setState({ message: "" });
     }
 
     onCellEdited(rowIdx, colIdx, display, formula) {
@@ -432,7 +433,7 @@ class App extends React.Component {
             } else {
                 console.log(json);
                 let message = json.statusInfo + ' ' + json.entity;
-                this.setState({ text: message });
+                this.setState({ message: message });
             }
         });
 
@@ -517,7 +518,12 @@ class App extends React.Component {
                 if (Array.isArray(json)) {
                     this.getSpreadsheet(json[0]);
                 } else {
-                    this.getSpreadsheet(json['id'])
+                    if ('id' in json) {
+                        this.getSpreadsheet(json['id']);
+                    } else if ('status' in json && json['status'] > 299) {
+                        let message = json.statusInfo + ' ' + json.entity;
+                        this.setState({ message: message });        
+                    }
                 }
 
             });
