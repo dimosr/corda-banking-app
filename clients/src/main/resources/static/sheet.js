@@ -12,6 +12,7 @@ let Row = ReactBootstrap.Row;
 let Col = ReactBootstrap.Col;
 let Container = ReactBootstrap.Container;
 let Table = ReactBootstrap.Table;
+let Dropdown = ReactBootstrap.Dropdown;
 
 class Spreadsheet extends React.Component {
     constructor(props) {
@@ -153,7 +154,7 @@ class Spreadsheets extends React.Component {
     render() {
         return (
             <div class="pt-2">
-                <ListOfSpreadsheets spreadsheets={this.props.spreadsheets} onSelect={this.props.onSelected} />
+                <ListOfSpreadsheets spreadsheets={this.props.spreadsheets} onSelect={this.props.onSelect} />
                 <div class="pt-2 pb-2">
                     <Button onClick={() => this.props.onClick()}>New spreadsheet</Button>
                 </div>
@@ -167,18 +168,18 @@ class ListOfSpreadsheets extends React.Component {
     constructor(props) {
         super(props);
         this.createChildren = this.createChildren.bind(this);
-        this.onSelected = this.onSelected.bind(this);
+        this.onSelect = this.onSelect.bind(this);
     }
 
-    onSelected(obj) {
+    onSelect(obj) {
         console.log(obj);
-        this.props.onSelected(obj);
+        this.props.onSelect(obj);
     }
 
     createChildren() {
         let children = []
-        for (let i = 0; i < this.props.spreadsheets; i++) {
-            children.push(<option>{i}</option>)
+        for (let i = 0; i < this.props.spreadsheets.length; i++) {
+            children.push(<option>{this.props.spreadsheets[i]}</option>)
         }
         return children
     }
@@ -187,7 +188,7 @@ class ListOfSpreadsheets extends React.Component {
         return (
             <Form.Group controlId={this.props.controlId}>
                 <Form.Label>{this.props.title ? this.props.title : "Spreadsheet"}</Form.Label>
-                <Form.Control as="select" onChange={this.onSelected}>
+                <Form.Control as="select" onChange={this.onSelect}>
                     {this.createChildren()}
                 </Form.Control>
             </Form.Group>
@@ -252,7 +253,10 @@ class App extends React.Component {
             <div>
                 <NavigationBar />
 
-                <Spreadsheets spreadsheets={this.state.spreadsheets} onClick={this.newSpreadsheet} onSelect={this.getSpreadsheet} />
+                <Spreadsheets
+                    spreadsheets={this.state.spreadsheets}
+                    onClick={this.newSpreadsheet}
+                    onSelect={this.getSpreadsheet} />
 
                 <Spreadsheet data={this.state.data} onCellEdited={this.onCellEdited} />
             </div>
