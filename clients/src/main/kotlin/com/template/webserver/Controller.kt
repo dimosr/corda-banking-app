@@ -58,8 +58,7 @@ class Controller(rpc: NodeRPCConnection) {
 
     @GetMapping(value = "create-spreadsheet", produces = ["application/json"])
     private fun createSpreadsheet() = try {
-        proxy.startTrackedFlow(::CreateSpreadsheetFlow).returnValue.get()
-        "Spreadsheet created successfully."
+        proxy.startTrackedFlow(::CreateSpreadsheetFlow).returnValue.get().linearId
     } catch (e: Exception) {
         Response.status(Response.Status.BAD_REQUEST).entity(e.message).build()
     }
@@ -75,10 +74,10 @@ class Controller(rpc: NodeRPCConnection) {
         require(d != null || f != null) { "Either formula or value must be non trivial value." }
 
         if (f == null)
-            // TODO: update version
+        // TODO: update version
             proxy.startTrackedFlow(::UpdateValueStateFlow, id, row, col, d!!, 0).returnValue.get()
         else
-            // TODO: update version
+        // TODO: update version
             proxy.startTrackedFlow(::UpdateFormulaStateFlow, id, row, col, f, 0).returnValue.get()
 
         "Successful cell update."
