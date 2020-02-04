@@ -24,6 +24,7 @@ class Controller(rpc: NodeRPCConnection) {
 
     private val proxy = rpc.proxy
     private val objectMapper = JacksonSupport.createNonRpcMapper()
+    private val me = proxy.nodeInfo().legalIdentities.first()
 
     @GetMapping(value = "get-all-spreadsheets", produces = ["application/json"])
     private fun getAllSpreadsheets() = try {
@@ -41,10 +42,10 @@ class Controller(rpc: NodeRPCConnection) {
 
         val renderableCells = spreadsheet!!.valueStates.map {
             val state = it.state.data
-            RenderableCell(state.rowId, state.columnId, state.data, null, state.version)
+            RenderableCell(state.rowId, state.columnId, state.data, null, state.version, state.owner == me)
         } + spreadsheet.formulaStates.map { (formulaState, calculatedValue) ->
             val state = formulaState.state.data
-            RenderableCell(state.rowId, state.columnId, calculatedValue, state.formula, state.version)
+            RenderableCell(state.rowId, state.columnId, calculatedValue, state.formula, state.version, state.editors.contains(me))
         }
 
         val res = renderableCells.sortedWith(compareBy({ it.row }, { it.col })).map {
@@ -84,4 +85,4 @@ class Controller(rpc: NodeRPCConnection) {
     }
 }
 
-data class RenderableCell(val row: Int, val col: Int, val d: String?, val f: String?, val version: Int)
+data class RenderableCell(val row: Int, val col: Int, val d: String?, val f: String?, val version: Int, val owner: Boolean)
