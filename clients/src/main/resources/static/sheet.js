@@ -12,7 +12,6 @@ let Row = ReactBootstrap.Row;
 let Col = ReactBootstrap.Col;
 let Container = ReactBootstrap.Container;
 let Table = ReactBootstrap.Table;
-let Modal = ReactBootstrap.Modal;
 
 class Spreadsheet extends React.Component {
     constructor(props) {
@@ -33,13 +32,17 @@ class Spreadsheet extends React.Component {
             }
         }
 
-        console.log(maxRowLength);
+        console.log("Max row length", maxRowLength);
+        console.log("oncelleedited", this.props.onCellEdited)
 
         return (<div class="pt-2">
             <h6>Spreadsheet {this.props.spreadsheetNumber}</h6>
             <Table striped bordered hover>
                 <SpreadsheetHeader maxRowLength={maxRowLength} />
-                <SpreadsheetBody data={this.props.data} onCellEdited={this.props.onCellEdited} maxRowLength={maxRowLength} />
+                <SpreadsheetBody
+                    data={this.props.data}
+                    onCellEdited={this.props.onCellEdited}
+                    maxRowLength={maxRowLength} />
             </Table>
         </div>);
     }
@@ -80,20 +83,79 @@ class SpreadsheeHeaderCell extends React.Component {
     }
 }
 
+class SpreadsheetEditCell extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { editable: false }
+        this.handleSubmit = this.handleSubmit.bind(this);
+        console.log("Cell: row=", this.props.rowIdx, " col=", this.props.colIdx, "  display=", this.props.display, "  formula=", this.props.formula)
+    }
+
+    //  prefix formula with '='
+    render() {
+        let placeholder = this.props.formula !== undefined ? "=" + this.props.formula : this.props.display;
+        return (
+            <td>
+                <Form onSubmit={this.handleSubmit}>
+                    <Form.Group controlId='cellValue'>
+                        <Form.Control placeholder={placeholder} name='cellValue' ref='cellValue' />
+                    </Form.Group>
+                    <Button type='submit'>Update</Button>
+                </Form>
+            </td>
+        );
+    }
+
+    handleSubmit(e) {
+        // this stops the page refreshing.  If we remove this, then don't chain a call to get tickets
+        e.preventDefault();
+        let form = e.target;
+        let value = form.elements.cellValue.value;
+        if (value.startsWith("=")) {
+            // is a formula
+            this.props.onCellEdited(null, value);
+        } else {
+            this.props.onCellEdited(value, null);
+        }
+    }
+}
+
 class SpreadsheetCell extends React.Component {
     constructor(props) {
         super(props);
+        this.state = { editable: false }
+        this.onEdit = this.onEdit.bind(this);
         console.log("Cell: row=", this.props.rowIdx, " col=", this.props.colIdx, "  display=", this.props.display, "  formula=", this.props.formula)
+    }
+
+    onEdit() {
+        this.setState({ editable: true });
+    }
+
+    onCellEdited(display, formula) {
+        this.props.onCellEdited(
+            this.props.rowIdx,
+            this.props.colIdx,
+            display,
+            formula);
+
+        this.setState({ editable: false });
     }
 
     render() {
         if (this.props.onCellEdited) {
-            return (
-                <td onClick={() => this.props.onCellEdited(1,
-                    this.props.rowIdx,
-                    this.props.colIdx,
-                    this.props.display,
-                    this.props.formula)}>{this.props.display}</td>);
+            if (this.state.editable) {
+                return (<SpreadsheetEditCell
+                    display={this.props.display}
+                    formula={this.props.formula}
+                    colIdx={this.props.colIdx}
+                    rowIdx={this.props.rowIdx}
+                    onCellEdited={(d, f) => this.onCellEdited(d, f)} />);
+            } else {
+                return (
+                    <td onClick={() => this.onEdit()}>{this.props.display}</td>
+                );
+            }
         } else {
             return <td>{this.props.display}</td>
         }
@@ -238,6 +300,7 @@ class App extends React.Component {
         super(props);
 
         this.state = {
+            current_id: "",
             spreadsheets: [],
             data: [
                 [
@@ -288,25 +351,26 @@ class App extends React.Component {
         //     .then(() => nextThing());
     }
 
-    onCellEdited(sheetIdx, rowIdx, colIdx, display, formula) {
-        console.log("onCellEdited", rowIdx, ",", colIdx);
+    onCellEdited(rowIdx, colIdx, display, formula) {
+        // Don't store the state here, just send it back to the server.
 
-        // return fetch('/set-value', {
-        //     method: 'POST',
-        //     headers: {
-        //         'Accept': 'application/json',
-        //         'Content-Type': 'application/json',
-        //     },
-        //     body: JSON.stringify({
-        //         row: rowIdx,
-        //         col: colIdx,
-        //         display: display,
-        //         formula: formula
-        //     })
-        // });
-        //         .then(() => this.getSpreadsheet());
 
-        // TODO - sespond to the result of this call - the message could fail to calculate on the server.
+        console.log("onCellEdited", this.state.current_id, "(", rowIdx, ",", colIdx, ")", display, formula);
+
+        return fetch('/set-data'
+            + '?id=' + this.state.current_id
+            + '&d=' + display
+            + '&f=' + formula
+            + '&row=' + rowIdx
+            + '&col=' + colIdx).then(
+                result => {
+                    if (result.status == 200) {
+                        this.getSpreadsheet(this.state.current_id);
+                    }
+                }
+            )
+
+        // TODO - respond to the result of this call - the message could fail to calculate on the server.
         // TODO - remove the 'getSpreadsheet' and react to an 'on tick' from the web socket.
     }
 
@@ -327,7 +391,10 @@ class App extends React.Component {
             })
             .then(data => {
                 console.log("SHEET DATA", data);
-                this.setState({ data: data });
+                this.setState({
+                    data: data,
+                    current_id: id
+                });
             });
     }
 
@@ -337,6 +404,7 @@ class App extends React.Component {
     }
 
     openWebSocket() {
+        // TODO = the magic
         let socket = new WebSocket("ws://" + location.host + "/ws");
 
         socket.onmessage = (msg) => {
