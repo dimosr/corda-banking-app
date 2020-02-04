@@ -28,4 +28,8 @@ data class SpreadsheetState(val valueStates: List<UniqueIdentifier>,
     override fun supportedSchemas(): Iterable<MappedSchema> = listOf(SpreadsheetStateSchemaV1)
 
     override val participants: List<AbstractParty> = editors
+
+    fun addValueState(valueState: UniqueIdentifier) = copy(valueStates = valueStates + valueState)
+
+    fun addFormulaState(formulaState: UniqueIdentifier) = copy(formulaStates = formulaStates + formulaState)
 }

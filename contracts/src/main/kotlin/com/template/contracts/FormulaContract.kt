@@ -22,7 +22,7 @@ class FormulaContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val formulaCommands = tx.commands.map { it.value }.filterIsInstance<Commands>()
         formulaCommands.forEach { command ->
-            when(command) {
+            when (command) {
                 Commands.Update() -> {
                     val inputStates = tx.inputStates
                     val outputStates = tx.outputStates
@@ -39,8 +39,9 @@ class FormulaContract : Contract {
     }
 
     // Used to indicate the transaction's intent.
-    interface Commands: CommandData {
-        class Update: TypeOnlyCommandData(), Commands
+    interface Commands : CommandData {
+        class Issue : TypeOnlyCommandData(), Commands
+        class Update : TypeOnlyCommandData(), Commands
     }
 }
 
@@ -86,7 +87,7 @@ class FormulaCalculator { // TODO: handle empty cells
 
         fun prepareResultString(result: Any): String {
             var resultString = result.toString()
-            if(resultString.takeLast(2) == ".0")
+            if (resultString.takeLast(2) == ".0")
                 resultString = resultString.substring(0, resultString.length - 2)
             return resultString
         }
