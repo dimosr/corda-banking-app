@@ -19,7 +19,7 @@ class ValueContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val valueCommands = tx.commands.map { it.value }.filterIsInstance<Commands>()
         valueCommands.forEach { command ->
-            when (command) {
+            when(command) {
                 Commands.Update() -> {
                     val inputStates = tx.inputStates
                     val outputStates = tx.outputStates
@@ -36,8 +36,7 @@ class ValueContract : Contract {
     }
 
     // Used to indicate the transaction's intent.
-    interface Commands : CommandData {
-        class Issue : TypeOnlyCommandData(), Commands
-        class Update : TypeOnlyCommandData(), Commands
+    interface Commands: CommandData {
+        class Update: TypeOnlyCommandData(), Commands
     }
 }
