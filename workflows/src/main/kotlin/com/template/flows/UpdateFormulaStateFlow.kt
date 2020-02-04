@@ -93,13 +93,13 @@ class UpdateFormulaStateFlowResponder(val counterpartySession: FlowSession) : Fl
 fun convertFormulaToUseStateRefs(originalValue: String, stateRefs: List<StateAndRef<ValueState>>): String {
     var calculatedValue = originalValue
     stateRefs.forEach { stateAndRef ->
-        val stateRefIdentifier = "_${stateAndRef.ref.txhash}_${stateAndRef.ref.index}"
+        val stateRefIdentifier = "_${stateAndRef.state.data.linearId.toString().replace("-", "_")}"
         val spreadsheetIdentifier = "${INDEX_TO_CHARACTERS_MAP[stateAndRef.state.data.columnId]}${stateAndRef.state.data.rowId + 1}"
         // using double replace to avoid identifying spreadsheet identifiers inside stateref hashes
         calculatedValue = calculatedValue.replace(spreadsheetIdentifier, "($spreadsheetIdentifier)")
     }
     stateRefs.forEach { stateAndRef ->
-        val stateRefIdentifier = "_${stateAndRef.ref.txhash}_${stateAndRef.ref.index}"
+        val stateRefIdentifier = "_${stateAndRef.state.data.linearId.toString().replace("-", "_")}"
         val spreadsheetIdentifier = "${INDEX_TO_CHARACTERS_MAP[stateAndRef.state.data.columnId]}${stateAndRef.state.data.rowId + 1}"
         calculatedValue = calculatedValue.replace("($spreadsheetIdentifier)", stateRefIdentifier)
     }
@@ -109,7 +109,7 @@ fun convertFormulaToUseStateRefs(originalValue: String, stateRefs: List<StateAnd
 fun convertFormulaToUseSpreadsheetValues(originalValue: String, stateRefs: List<StateAndRef<ValueState>>): String {
     var calculatedValue = originalValue
     stateRefs.forEach { stateAndRef ->
-        val stateRefIdentifier = "_${stateAndRef.ref.txhash}_${stateAndRef.ref.index}"
+        val stateRefIdentifier = "_${stateAndRef.state.data.linearId.toString().replace("-", "_")}"
         val spreadsheetIdentifier = "${INDEX_TO_CHARACTERS_MAP[stateAndRef.state.data.columnId]}${stateAndRef.state.data.rowId + 1}"
         calculatedValue = calculatedValue.replace(stateRefIdentifier, spreadsheetIdentifier)
     }
@@ -119,7 +119,7 @@ fun convertFormulaToUseSpreadsheetValues(originalValue: String, stateRefs: List<
 fun calculateFormulaValue(canonicalValue: String, stateRefs: List<StateAndRef<ValueState>>): String {
     val cellToValueMap = stateRefs.map { stateAndRef ->
         val value = if(stateAndRef.state.data.data == "") "0" else stateAndRef.state.data.data
-        "_${stateAndRef.ref.txhash}_${stateAndRef.ref.index}" to value
+        "_${stateAndRef.state.data.linearId.toString().replace("-", "_")}" to value
     }.toMap() as HashMap<String, String>
     return FormulaCalculator.calculateFormula(canonicalValue, cellToValueMap)
 }
