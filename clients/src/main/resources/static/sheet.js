@@ -402,6 +402,9 @@ class App extends React.Component {
         //     .then(() => nextThing())
         //     .then(() => nextThing())
         //     .then(() => nextThing());
+        setInterval(() => {
+            this.getSpreadsheet(this.state.current_id)
+        }, 1000);
     }
 
     clearMessage() {
@@ -497,10 +500,11 @@ class App extends React.Component {
 
     // REST call
     getSpreadsheet(id) {
-        if (!id) {
-            console.log("Invalid spreadsheet id");
+        if (!id || id === "") {
+            // console.log("Invalid spreadsheet id");
             return;
         }
+
         fetch('/get-spreadsheet?id=' + id)
             .then(result => {
                 console.log(result);
