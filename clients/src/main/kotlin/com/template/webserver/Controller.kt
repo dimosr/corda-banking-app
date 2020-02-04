@@ -5,7 +5,6 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.core.messaging.startTrackedFlow
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.lang.Exception
@@ -42,14 +41,14 @@ class Controller(rpc: NodeRPCConnection) {
 
         val renderableCells = spreadsheet!!.valueStates.map {
             val state = it.state.data
-            RenderableCell(state.rowId, state.columnId, state.data, null)
+            RenderableCell(state.rowId, state.columnId, state.data, null, state.version)
         } + spreadsheet.formulaStates.map {
             val state = it.state.data
-            RenderableCell(state.rowId, state.columnId, null, state.formula)
+            RenderableCell(state.rowId, state.columnId, null, state.formula, state.version)
         }
 
         val res = renderableCells.sortedWith(compareBy({ it.row }, { it.col })).map {
-            listOf(it.d, it.f, it.row, it.col)
+            listOf(it.d, it.f, it.row, it.col, it.version)
         }
         objectMapper.writeValueAsString(res)
     } catch (e: Exception) {
@@ -69,16 +68,17 @@ class Controller(rpc: NodeRPCConnection) {
             @QueryParam(value = "d") d: String?,
             @QueryParam(value = "f") f: String?,
             @QueryParam(value = "row") row: Int,
-            @QueryParam(value = "col") col: Int
+            @QueryParam(value = "col") col: Int,
+            @QueryParam(value = "version") version: Int
     ) = try {
         require(d != null || f != null) { "Either formula or value must be non trivial value." }
 
         if (f == null)
         // TODO: update version
-            proxy.startTrackedFlow(::UpdateValueStateFlow, id, row, col, d!!, 0).returnValue.get()
+            proxy.startTrackedFlow(::UpdateValueStateFlow, id, row, col, d!!, version).returnValue.get()
         else
         // TODO: update version
-            proxy.startTrackedFlow(::UpdateFormulaStateFlow, id, row, col, f, 0).returnValue.get()
+            proxy.startTrackedFlow(::UpdateFormulaStateFlow, id, row, col, f, version).returnValue.get()
 
         "Successful cell update."
     } catch (e: Exception) {
@@ -86,4 +86,4 @@ class Controller(rpc: NodeRPCConnection) {
     }
 }
 
-data class RenderableCell(val row: Int, val col: Int, val d: String?, val f: String?)
+data class RenderableCell(val row: Int, val col: Int, val d: String?, val f: String?, val version: Int)
