@@ -43,7 +43,7 @@ class Controller(rpc: NodeRPCConnection) {
             val state = it.state.data
             RenderableCell(state.rowId, state.columnId, state.data, null, state.version)
         } + spreadsheet.formulaStates.map {
-            val state = it.state.data
+            val state = it.first.state.data
             RenderableCell(state.rowId, state.columnId, null, state.formula, state.version)
         }
 

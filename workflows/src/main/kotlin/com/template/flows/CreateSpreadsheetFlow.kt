@@ -62,15 +62,11 @@ class CreateSpreadsheetFlow : FlowLogic<SpreadsheetDTO>() {
 
         val valueStatesWithRefs = valueStates.map { retrieveValueState(it.linearId, serviceHub.vaultService) }
         val formulaStatesWithRef = formulaStates.map { retrieveFormulaState(it.linearId, serviceHub.vaultService) }
+        val formulaStatesWithCalculatedValues = formulaStatesWithRef.map {
+            it to "0"
+        }
 
-        val cellToValueMap = valueStatesWithRefs.map {
-            it.ref.txhash.toString() + "_" + it.ref.index to it.state.data.data
-        }.toMap() as HashMap<String, String>
-        val calculatedFormulaValue = FormulaCalculator.calculateFormula(
-                formulaStatesWithRef[0].state.data.formula, cellToValueMap)
-
-        return SpreadsheetDTO(valueStatesWithRefs, formulaStatesWithRef, spreadsheetState.editors,
-                spreadsheetId.toString(), calculatedFormulaValue)
+        return SpreadsheetDTO(valueStatesWithRefs, formulaStatesWithCalculatedValues, spreadsheetState.editors, spreadsheetId.toString())
     }
 }
 

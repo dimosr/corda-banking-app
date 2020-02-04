@@ -41,7 +41,7 @@ class DriverBasedTest {
         assertEquals(2, spreadsheetDto!!.valueStates.size)
         var ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
         assertEquals("", ourState.state.data.data)
-        assertEquals("", spreadsheetDto!!.calculatedFormulaValue)
+        assertEquals("", spreadsheetDto.formulaStates.first().second)
 
         partyAHandle.rpc.startFlow(::UpdateValueStateFlow, spreadsheetDto.linearId, ourState.state.data.rowId, ourState.state.data.columnId,  "12", ourState.state.data.version).returnValue.get()
 
@@ -51,11 +51,10 @@ class DriverBasedTest {
         ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
         assertEquals("12", ourState.state.data.data)
 
-        val formulaState = spreadsheetDto.formulaStates.first().state.data
-        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A_1+B_1", formulaState.version).returnValue.get()
+        val formulaState = spreadsheetDto.formulaStates.first().first.state.data
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1+B1", formulaState.version).returnValue.get()
         spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
-        assertEquals("A_1+B_1", spreadsheetDto!!.formulaStates.first().state.data.formula)
-        assertEquals("0", spreadsheetDto!!.calculatedFormulaValue)
+        assertEquals("A1+B1", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
     }
 
     @Test
@@ -70,7 +69,7 @@ class DriverBasedTest {
 
         var spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
 
-        val formulaState = spreadsheetDto!!.formulaStates.first().state.data
+        val formulaState = spreadsheetDto!!.formulaStates.first().first.state.data
         assertThatThrownBy { partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "a+b", formulaState.version+1).returnValue.getOrThrow() }
                 .isInstanceOf(InvalidVersionException::class.java)
     }
@@ -87,7 +86,7 @@ class DriverBasedTest {
 
         var spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
 
-        val formulaState = spreadsheetDto!!.formulaStates.first().state.data
+        val formulaState = spreadsheetDto!!.formulaStates.first().first.state.data
         assertThatThrownBy {
             val flow1Handle = partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "a+b", formulaState.version)
             val flow2Handle = partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "a+b", formulaState.version)
@@ -96,6 +95,38 @@ class DriverBasedTest {
             flow2Handle.returnValue.getOrThrow()
         }
         .isInstanceOf(ConcurrentModificationException::class.java)
+    }
+
+    @Test
+    fun `formula calculation works correctly`() = withDriver {
+        // Start a pair of nodes and wait for them both to be ready.
+        val (partyAHandle, partyBHandle) = startNodes(bankA, bankB)
+        val ourIdentity = partyAHandle.nodeInfo.legalIdentities.first()
+
+        partyAHandle.rpc.startFlow(::CreateSpreadsheetFlow).returnValue.get()
+        val spreadsheetIds = partyAHandle.rpc.startFlow(::GetAllSpreadsheetsFlow).returnValue.get()
+        val spreadsheetId = spreadsheetIds.first()
+
+        var spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
+        assertNotNull(spreadsheetDto)
+        assertEquals(2, spreadsheetDto!!.valueStates.size)
+        var ourState = spreadsheetDto.valueStates.filter { it.state.data.owner == ourIdentity }.single()
+        val theirState = spreadsheetDto.valueStates.filter { it.state.data.owner == partyBHandle.nodeInfo.legalIdentities.first() }.single()
+
+        partyAHandle.rpc.startFlow(::UpdateValueStateFlow, spreadsheetDto.linearId, ourState.state.data.rowId, ourState.state.data.columnId,  "12", ourState.state.data.version).returnValue.get()
+        partyBHandle.rpc.startFlow(::UpdateValueStateFlow, spreadsheetDto.linearId, theirState.state.data.rowId, theirState.state.data.columnId,  "5", ourState.state.data.version).returnValue.get()
+
+        var formulaState = spreadsheetDto.formulaStates.first().first.state.data
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1+B1", formulaState.version).returnValue.get()
+        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
+        assertEquals("A1+B1", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
+        assertEquals(17, spreadsheetDto.formulaStates.first().second.toFloat().toInt())
+
+        formulaState = spreadsheetDto.formulaStates.first().first.state.data
+        partyAHandle.rpc.startFlow(::UpdateFormulaStateFlow, spreadsheetDto.linearId, formulaState.rowId, formulaState.columnId, "A1*B1", formulaState.version).returnValue.get()
+        spreadsheetDto = partyAHandle.rpc.startFlow(::GetSpreadsheetFlow, spreadsheetId).returnValue.get()
+        assertEquals("A1*B1", spreadsheetDto!!.formulaStates.first().first.state.data.formula)
+        assertEquals(60, spreadsheetDto.formulaStates.first().second.toFloat().toInt())
     }
 
     // Runs a test inside the Driver DSL, which provides useful functions for starting nodes, etc.

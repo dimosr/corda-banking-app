@@ -48,7 +48,7 @@ class FormulaCalculator { // TODO: handle empty cells
 
     companion object {
         private val engine = ScriptEngineManager().getEngineByName("JavaScript")
-        private val cellIdentifierRegex = Regex("[A-Z]+_[0-9]+")
+        private val cellIdentifierRegex = Regex("[A-Z]+[0-9]+")
         val invalidFormulaErrorMessage = "INVALID FORMULA"
 
         fun calculateFormula(formula: String, cellToValueMap: HashMap<String, String>): String {

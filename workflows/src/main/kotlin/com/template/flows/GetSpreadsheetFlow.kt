@@ -32,14 +32,16 @@ class GetSpreadsheetFlow(private val spreadsheetId: String) : FlowLogic<Spreadsh
             retrieveFormulaState(linearId, serviceHub.vaultService)
         }
 
-        val cellToValueMap = valueStates.map {
-            it.ref.txhash.toString() + "_" + it.ref.index to it.state.data.data
-        }.toMap() as HashMap<String, String>
-        val calculatedFormulaValue = FormulaCalculator.calculateFormula(
-                formulaStates[0].state.data.formula, cellToValueMap)
+        val formulaStatesWithCalculatedValues = formulaStates.map { formulaStateAndRef ->
+            val calculatedFormulaValue = calculateFormulaValue(formulaStateAndRef.state.data.formula, valueStates)
+            val canonicalFormula = formulaStateAndRef.state.data.formula
+            val convertedFormulaState = formulaStateAndRef.state.data.copy(formula = convertFormulaToUseSpreadsheetValues(canonicalFormula, valueStates))
+            val convertedTxState = formulaStateAndRef.state.copy(data = convertedFormulaState)
+            val convertedFormulaStateAndRef = formulaStateAndRef.copy(state = convertedTxState)
+            Pair(convertedFormulaStateAndRef, calculatedFormulaValue)
+        }
 
-        return SpreadsheetDTO(valueStates, formulaStates, spreadsheet.editors, spreadsheet.linearId.toString(),
-                calculatedFormulaValue)
+        return SpreadsheetDTO(valueStates, formulaStatesWithCalculatedValues, spreadsheet.editors, spreadsheet.linearId.toString())
     }
 }
 

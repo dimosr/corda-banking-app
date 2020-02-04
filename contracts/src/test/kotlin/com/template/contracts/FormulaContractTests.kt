@@ -5,7 +5,7 @@ import kotlin.test.assertEquals
 
 class FormulaContractTests {
 
-    private val cellToValueMap = hashMapOf("A_1" to "2", "A_11" to "7")
+    private val cellToValueMap = hashMapOf("A1" to "2", "A11" to "7")
 
     @Test
     fun test_calculateFormula_equationIsCalculatedCorrectly() {
@@ -15,25 +15,25 @@ class FormulaContractTests {
 
     @Test
     fun test_calculateFormula_cellValuesAreExtractedCorrectly() {
-        val result = FormulaCalculator.calculateFormula("A_1+A_11", cellToValueMap)
+        val result = FormulaCalculator.calculateFormula("A1+A11", cellToValueMap)
         assertEquals("9", result)
     }
 
     @Test
     fun test_calculateFormula_mixEquationWorks() {
-        val result = FormulaCalculator.calculateFormula("A_1*5-(A_11+1)", cellToValueMap)
+        val result = FormulaCalculator.calculateFormula("A1*5-(A11+1)", cellToValueMap)
         assertEquals("2", result)
     }
 
     @Test
     fun test_calculateFormula_unknownBindersAreReplacedWithZero() {
-        val result = FormulaCalculator.calculateFormula("A_2+5", cellToValueMap)
+        val result = FormulaCalculator.calculateFormula("A2+5", cellToValueMap)
         assertEquals("5", result)
     }
 
     @Test
     fun test_calculateFormula_ZeroIsCorrectlyDisplayed() {
-        val result = FormulaCalculator.calculateFormula("A_2", cellToValueMap)
+        val result = FormulaCalculator.calculateFormula("A2", cellToValueMap)
         assertEquals("0", result)
     }
 

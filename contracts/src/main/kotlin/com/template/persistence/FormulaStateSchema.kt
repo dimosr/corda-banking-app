@@ -15,7 +15,7 @@ object FormulaStateSchemaV1: MappedSchema(schemaFamily = FormulaStateSchema.java
     @Entity
     @Table(name = "formula_states")
     class PersistentFormulaState(
-            @Column(name = "formula", nullable = false)
+            @Column(name = "formula", nullable = false, columnDefinition = "TEXT")
             var formula: String,
 
             @Column(name = "editors", nullable = false)
