@@ -42,9 +42,9 @@ class Controller(rpc: NodeRPCConnection) {
         val renderableCells = spreadsheet!!.valueStates.map {
             val state = it.state.data
             RenderableCell(state.rowId, state.columnId, state.data, null, state.version)
-        } + spreadsheet.formulaStates.map {
-            val state = it.first.state.data
-            RenderableCell(state.rowId, state.columnId, null, state.formula, state.version)
+        } + spreadsheet.formulaStates.map { (formulaState, calculatedValue) ->
+            val state = formulaState.state.data
+            RenderableCell(state.rowId, state.columnId, calculatedValue, state.formula, state.version)
         }
 
         val res = renderableCells.sortedWith(compareBy({ it.row }, { it.col })).map {
@@ -74,10 +74,8 @@ class Controller(rpc: NodeRPCConnection) {
         require(d != null || f != null) { "Either formula or value must be non trivial value." }
 
         if (f == null)
-        // TODO: update version
             proxy.startTrackedFlow(::UpdateValueStateFlow, id, row, col, d!!, version).returnValue.get()
         else
-        // TODO: update version
             proxy.startTrackedFlow(::UpdateFormulaStateFlow, id, row, col, f, version).returnValue.get()
 
         "Successful cell update."
