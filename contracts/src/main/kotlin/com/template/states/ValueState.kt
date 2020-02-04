@@ -17,11 +17,12 @@ data class ValueState(val data: String,
                       val watchers: List<Party>,
                       val rowId: Int,
                       val columnId: Int,
+                      val version: Int,
                       override val linearId: UniqueIdentifier) : LinearState, QueryableState {
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         return when(schema) {
             is ValueStateSchemaV1 -> {
-                ValueStateSchemaV1.PersistentValueState(data, owner, watchers, rowId, columnId, linearId.toString())
+                ValueStateSchemaV1.PersistentValueState(data, owner, watchers, rowId, columnId, version, linearId.toString())
             }
             else -> throw IllegalArgumentException("Unsupported schema: $schema")
         }

@@ -31,7 +31,8 @@ class UpdateValueStateFlow(
         private val spreadsheetStateId: String,
         private val rowId: Int,
         private val columnId: Int,
-        private val newValue: String
+        private val newValue: String,
+        private val version: Int
 ) : FlowLogic<Unit>() {
 
     @Suspendable
@@ -50,11 +51,13 @@ class UpdateValueStateFlow(
         if (currentState.state.data.owner != ourIdentity)
             throw InvalidOwnerException(currentState.state.data.owner)
 
-        val newState = ValueState(newValue, currentState.state.data.owner, currentState.state.data.watchers, currentState.state.data.rowId, currentState.state.data.columnId, currentState.state.data.linearId)
+        if (version != currentState.state.data.version)
+            throw InvalidVersionException(currentState.state.data.version, version)
+        val newState = ValueState(newValue, currentState.state.data.owner, currentState.state.data.watchers, currentState.state.data.rowId, currentState.state.data.columnId, version + 1, currentState.state.data.linearId)
         val txBuilder = TransactionBuilder(notaryToUse)
         txBuilder.addInputState(currentState)
         txBuilder.addOutputState(newState)
-        txBuilder.addCommand(ValueContract.Update(), ourIdentity.owningKey)
+        txBuilder.addCommand(ValueContract.Commands.Update(), ourIdentity.owningKey)
         val fullySignedTx = serviceHub.signInitialTransaction(txBuilder)
 
         val sessions = newState.watchers.map { initiateFlow(it) }

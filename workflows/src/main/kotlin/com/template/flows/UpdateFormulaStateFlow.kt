@@ -8,16 +8,20 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.CollectSignaturesFlow
 import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import java.lang.IllegalArgumentException
 
 @InitiatingFlow
 @StartableByRPC
@@ -25,7 +29,8 @@ class UpdateFormulaStateFlow(
         private val spreadsheetStateId: String,
         private val rowId: Int,
         private val columnId: Int,
-        private val newValue: String
+        private val newValue: String,
+        private val version: Int
 ) : FlowLogic<Unit>() {
 
     @Suspendable
@@ -40,17 +45,27 @@ class UpdateFormulaStateFlow(
         val notaryToUse = notaries.first()
         val currentState = formulaStates.single { it.state.data.rowId == rowId && it.state.data.columnId == columnId }
 
-        val newState = FormulaState(newValue, currentState.state.data.editors, currentState.state.data.rowId, currentState.state.data.columnId, currentState.state.data.linearId)
+        if (version != currentState.state.data.version)
+            throw InvalidVersionException(currentState.state.data.version, version)
+        val newState = FormulaState(newValue, currentState.state.data.editors, currentState.state.data.rowId, currentState.state.data.columnId,version + 1, currentState.state.data.linearId)
         val txBuilder = TransactionBuilder(notaryToUse)
         txBuilder.addInputState(currentState)
         txBuilder.addOutputState(newState)
-        txBuilder.addCommand(FormulaContract.Update(), currentState.state.data.editors.map { it.owningKey })
+        txBuilder.addCommand(FormulaContract.Commands.Update(), currentState.state.data.editors.map { it.owningKey })
         val partiallySignedTx = serviceHub.signInitialTransaction(txBuilder)
 
         val otherParticipantSessions = (currentState.state.data.editors - ourIdentity).map { initiateFlow(it) }
         val fullySignedTx = subFlow(CollectSignaturesFlow(partiallySignedTx, otherParticipantSessions))
 
-        subFlow(FinalityFlow(fullySignedTx, otherParticipantSessions))
+        try {
+            subFlow(FinalityFlow(fullySignedTx, otherParticipantSessions))
+        } catch(e: NotaryException) {
+            if (e.error is NotaryError.Conflict) {
+                throw ConcurrentModificationException()
+            } else {
+                throw e
+            }
+        }
     }
 }
 
@@ -67,3 +82,6 @@ class UpdateFormulaStateFlowResponder(val counterpartySession: FlowSession) : Fl
         subFlow(ReceiveFinalityFlow(counterpartySession, signedTx.id))
     }
 }
+
+class InvalidVersionException(val expectedVersion: Int, val providedVersion: Int): FlowException()
+class ConcurrentModificationException(): FlowException()

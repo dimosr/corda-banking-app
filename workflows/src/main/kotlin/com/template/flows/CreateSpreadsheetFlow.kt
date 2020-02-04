@@ -1,7 +1,9 @@
 package com.template.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.template.contracts.FormulaContract
 import com.template.contracts.SpreadsheetContract
+import com.template.contracts.ValueContract
 import com.template.states.FormulaState
 import com.template.states.SpreadsheetState
 import com.template.states.ValueState
@@ -38,9 +40,9 @@ class CreateSpreadsheetFlow : FlowLogic<SpreadsheetDTO>() {
         allParticipants.sortedBy { it.name.toString() }
 
         val valueStates = allParticipants.sortedBy { it.name.toString() }
-                .mapIndexed { index, participant -> ValueState("", participant, allParticipants - participant, index, 0, UniqueIdentifier.fromString(UUID.randomUUID().toString())) }
+                .mapIndexed { index, participant -> ValueState("", participant, allParticipants - participant, index, 0, 0, UniqueIdentifier.fromString(UUID.randomUUID().toString())) }
         val formulaStates = listOf(0, 1, 2).map { index ->
-            FormulaState("", allParticipants, allParticipants.size, index, UniqueIdentifier.fromString(UUID.randomUUID().toString()))
+            FormulaState("", allParticipants, allParticipants.size, index, 0, UniqueIdentifier.fromString(UUID.randomUUID().toString()))
         }
         val spreadsheetId = UniqueIdentifier.fromString(UUID.randomUUID().toString())
         val spreadsheetState = SpreadsheetState(valueStates.map { it.linearId }, formulaStates.map { it.linearId }, otherParticipants + ourIdentity, spreadsheetId)
@@ -48,7 +50,8 @@ class CreateSpreadsheetFlow : FlowLogic<SpreadsheetDTO>() {
         valueStates.forEach { txBuilder.addOutputState(it) }
         formulaStates.forEach { txBuilder.addOutputState(it) }
         txBuilder.addOutputState(spreadsheetState)
-        txBuilder.addCommand(SpreadsheetContract.CreateSpreadsheet(), otherParticipants.map { it.owningKey } + ourIdentity.owningKey)
+        val signers = otherParticipants.map { it.owningKey } + ourIdentity.owningKey
+        txBuilder.addCommand(SpreadsheetContract.Commands.CreateSpreadsheet(), signers)
         val partiallySignedTx = serviceHub.signInitialTransaction(txBuilder)
 
         val sessions = otherParticipants.map { initiateFlow(it) }

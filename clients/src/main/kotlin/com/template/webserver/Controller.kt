@@ -75,9 +75,11 @@ class Controller(rpc: NodeRPCConnection) {
         require(d != null || f != null) { "Either formula or value must be non trivial value." }
 
         if (f == null)
-            proxy.startTrackedFlow(::UpdateValueStateFlow, id, row, col, d!!).returnValue.get()
+            // TODO: update version
+            proxy.startTrackedFlow(::UpdateValueStateFlow, id, row, col, d!!, 0).returnValue.get()
         else
-            proxy.startTrackedFlow(::UpdateFormulaStateFlow, id, row, col, f).returnValue.get()
+            // TODO: update version
+            proxy.startTrackedFlow(::UpdateFormulaStateFlow, id, row, col, f, 0).returnValue.get()
 
         "Successful cell update."
     } catch (e: Exception) {

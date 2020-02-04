@@ -31,11 +31,14 @@ object ValueStateSchemaV1: MappedSchema(schemaFamily = ValueStateSchema.javaClas
         @Column(name = "column_id", nullable = false)
         var columnId: Int,
 
+        @Column(name = "version", nullable = false)
+        var version: Int,
+
         @Column(name = "linear_id", nullable = false)
         var linearId: String
     ): PersistentState() {
         // no-arg constructor required by hibernate
-        constructor(): this("", null, emptyList(), 0, 0, "")
+        constructor(): this("", null, emptyList(), 0, 0, 0, "")
     }
 
 }
