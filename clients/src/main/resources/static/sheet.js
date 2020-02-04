@@ -95,12 +95,20 @@ class SpreadsheetEditCell extends React.Component {
         let placeholder = this.props.formula !== undefined ? "=" + this.props.formula : this.props.display;
         return (
             <td>
-                <Form onSubmit={this.handleSubmit}>
-                    <Form.Group controlId='cellValue'>
-                        <Form.Control placeholder={placeholder} name='cellValue' ref='cellValue' />
-                    </Form.Group>
-                    <Button type='submit'>Update</Button>
-                </Form>
+                <span>
+                    <Form onSubmit={this.handleSubmit}>
+                        <Form.Row>
+                            <Col>
+                                <Form.Group controlId='cellValue'>
+                                    <Form.Control column placeholder={placeholder} name='cellValue' ref='cellValue' />
+                                </Form.Group>
+                            </Col>
+                            <Col>
+                                <Button type='submit'>Update</Button>
+                            </Col>
+                        </Form.Row>
+                    </Form>
+                </span>
             </td>
         );
     }
@@ -112,7 +120,7 @@ class SpreadsheetEditCell extends React.Component {
         let value = form.elements.cellValue.value;
         if (value.startsWith("=")) {
             // is a formula
-            this.props.onCellEdited(null, value);
+            this.props.onCellEdited(null, value.substr(1));
         } else {
             this.props.onCellEdited(value, null);
         }
@@ -199,10 +207,10 @@ class SpreadsheetRow extends React.Component {
         for (let colIdx = 0; colIdx < this.props.maxRowLength; colIdx++) {
             if (colIdx < this.props.data.length) {
                 let c = this.props.data[colIdx];
-                if (c instanceof Object || c instanceof Map) {
-                    cells.push(<SpreadsheetCell display={c['d']} formula={c['f']} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
-                } else if (c instanceof Array) {
+                if (Array.isArray(c)) {
                     cells.push(<SpreadsheetCell display={c[0]} formula={c[1]} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
+                // } else if (c instanceof Array) {
+                //     cells.push(<SpreadsheetCell display={c['d']} formula={c['f']} colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
                 } else {
                     console.log("Bad cell - put a breakpoint here.")
                     cells.push(<SpreadsheetCell display="BAD CELL DATA" colIdx={colIdx} rowIdx={this.props.rowIdx} onCellEdited={this.props.onCellEdited} />);
@@ -293,28 +301,29 @@ class NavigationBar extends React.Component {
 
 
 // Note that we always have to pass values and callbacks down to the sub components.  Watch out for 'this' scoping.
-// Use () => { ... } for callbacks
+// Use () => {... } for callbacks
 class App extends React.Component {
     constructor(props) {
         super(props);
 
+        // example data
+        // [
+        //     {d: '55', f: 'A1+A2' },
+        //     {d: '78', f: null }
+        // ],
+        // [
+        //     {d: '44', f: 'B1+B2' },
+        //     {d: '33', f: null },
+        //     {d: '22', f: null }
+        // ],
+        // [
+        //     {d: '44', f: null }
+        // ]
+
         this.state = {
             current_id: "",
             spreadsheets: [],
-            data: [
-                [
-                    { d: '55', f: 'A1+A2' },
-                    { d: '78', f: null }
-                ],
-                [
-                    { d: '44', f: 'B1+B2' },
-                    { d: '33', f: null },
-                    { d: '22', f: null }
-                ],
-                [
-                    { d: '44', f: null }
-                ]
-            ],
+            data: [],
             nodeInfo: {}
         };
 
@@ -354,18 +363,20 @@ class App extends React.Component {
     onCellEdited(rowIdx, colIdx, display, formula) {
         // Don't store the state here, just send it back to the server.
 
+        console.log("onCellEdited", this.state.current_id, "(", rowIdx, ",", colIdx, ")", " d=", display, " f=", formula);
 
-        console.log("onCellEdited", this.state.current_id, "(", rowIdx, ",", colIdx, ")", display, formula);
+        let value = formula !== null ? '&f=' + formula : '&d=' + display;
 
         return fetch('/set-data'
             + '?id=' + this.state.current_id
-            + '&d=' + display
-            + '&f=' + formula
+            + value
             + '&row=' + rowIdx
             + '&col=' + colIdx).then(
                 result => {
                     if (result.status == 200) {
                         this.getSpreadsheet(this.state.current_id);
+                    } else if (result.status == 400) {
+                        console.log("BAD REQUEST");
                     }
                 }
             )
@@ -385,7 +396,7 @@ class App extends React.Component {
 
     convertData(dataFromNode) {
         let data = [];
-        for (let idx = 0 ; idx < dataFromNode.length ; idx++) {
+        for (let idx = 0; idx < dataFromNode.length; idx++) {
             // unpack cell:
             let cell = dataFromNode[idx];
             let d = cell[0];
@@ -397,10 +408,10 @@ class App extends React.Component {
                 data.push([]);
             }
             if (colIdx + 1 > data[rowIdx].length) {
-                data[rowIdx].push({d: "", f: null});
+                data[rowIdx].push({ d: "", f: null });
             }
 
-            data[rowIdx][colIdx] = [d,f]
+            data[rowIdx][colIdx] = [d, f]
         }
         return data;
     }
@@ -412,7 +423,7 @@ class App extends React.Component {
                 return result.json();
             })
             .then(data => {
-                console.log("SHEET DATA", data);
+                console.log("SHEET DATA = ", data);
                 let d = this.convertData(data);
                 this.setState({
                     data: d,
@@ -423,7 +434,14 @@ class App extends React.Component {
 
     newSpreadsheet() {
         fetch('/create-spreadsheet')
-            .then(result => console.log(result));
+            .then(result => {
+                console.log(result);
+                //return result.json();
+                // })
+                // .then(json => {
+                this.getAllSpreadsheets();
+                // console.log(json);
+            });
     }
 
     openWebSocket() {
