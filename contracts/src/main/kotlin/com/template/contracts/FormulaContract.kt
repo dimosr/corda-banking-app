@@ -24,7 +24,7 @@ class FormulaContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val formulaCommands = tx.commands.map { it.value }.filterIsInstance<Commands>()
         formulaCommands.forEach { command ->
-            when(command) {
+            when (command) {
                 Commands.Update() -> {
                     val inputStates = tx.inputStates
                     val outputStates = tx.outputStates
@@ -41,8 +41,9 @@ class FormulaContract : Contract {
     }
 
     // Used to indicate the transaction's intent.
-    interface Commands: CommandData {
-        class Update: TypeOnlyCommandData(), Commands
+    interface Commands : CommandData {
+        class Issue : TypeOnlyCommandData(), Commands
+        class Update : TypeOnlyCommandData(), Commands
     }
 }
 
@@ -53,15 +54,14 @@ class FormulaCalculator { // TODO: handle empty cells
         private val cellIdentifierRegex = Regex("[A-Z]+_[0-9]+")
 
         fun calculateFormula(formula: String, cellToValueMap: HashMap<String, String>): String {
-            if(formula == "")
+            if (formula == "")
                 return ""
 
             val bindings = SimpleBindings()
-            for((cellName, cellValue) in cellToValueMap) {
-                if(cellValue == "") {
+            for ((cellName, cellValue) in cellToValueMap) {
+                if (cellValue == "") {
                     bindings[cellName] = 0
-                }
-                else {
+                } else {
                     bindings[cellName] = cellValue.toFloat()
                 }
             }

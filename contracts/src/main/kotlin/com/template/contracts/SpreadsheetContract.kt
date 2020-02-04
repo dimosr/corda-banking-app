@@ -22,7 +22,7 @@ class SpreadsheetContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val spreadsheetCommands = tx.commands.map { it.value }.filterIsInstance<Commands>()
         spreadsheetCommands.forEach { command ->
-            when(command) {
+            when (command) {
                 Commands.CreateSpreadsheet() -> {
                     val inputStates = tx.inputStates
                     requireThat { "no inputs" using (inputStates.isEmpty()) }
@@ -47,7 +47,8 @@ class SpreadsheetContract : Contract {
     }
 
     // Used to indicate the transaction's intent.
-    interface Commands: CommandData {
-        class CreateSpreadsheet: TypeOnlyCommandData(), Commands
+    interface Commands : CommandData {
+        class CreateSpreadsheet : TypeOnlyCommandData(), Commands
+        class UpdateSpreadsheet : TypeOnlyCommandData(), Commands
     }
 }
