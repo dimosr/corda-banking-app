@@ -1,5 +1,7 @@
 # Corda Spreadsheets
 
+![Spreadsheet image](spreadsheet.png)
+
 ## Web Server API
 
 - `GET /get-all-spreadsheets` gets all existing spreadsheets' linear IDs
